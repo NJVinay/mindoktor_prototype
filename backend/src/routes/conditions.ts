@@ -5,19 +5,10 @@ import { AppError } from '../middleware/errorHandler.js';
 
 export const conditionRoutes = Router();
 
-const querySchema = z.object({
-  category: z.union([z.string(), z.array(z.string())]).optional(),
-  zone: z.union([z.string(), z.array(z.string())]).optional(),
-  layer: z.union([z.string(), z.array(z.string())]).optional(),
-  tag: z.union([z.string(), z.array(z.string())]).optional(),
-  q: z.union([z.string(), z.array(z.string())]).optional(),
-}).transform((data) => ({
-  category: Array.isArray(data.category) ? data.category[0] : data.category,
-  zone: Array.isArray(data.zone) ? data.zone[0] : data.zone,
-  layer: Array.isArray(data.layer) ? data.layer[0] : data.layer,
-  tag: Array.isArray(data.tag) ? data.tag[0] : data.tag,
-  q: Array.isArray(data.q) ? data.q[0] : data.q,
-}));
+const answerSchema = z.object({
+  question_id: z.string(),
+  value: z.unknown(),
+});
 
 /**
  * GET /api/v1/conditions
@@ -26,7 +17,18 @@ const querySchema = z.object({
  */
 conditionRoutes.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const query = querySchema.parse(req.query);
+    // Extract query params safely - they can be string or string[] from Express
+    const getQueryParam = (val: string | string[] | undefined): string | undefined => {
+      return Array.isArray(val) ? val[0] : val;
+    };
+
+    const query = {
+      category: getQueryParam(req.query.category as any),
+      zone: getQueryParam(req.query.zone as any),
+      layer: getQueryParam(req.query.layer as any),
+      tag: getQueryParam(req.query.tag as any),
+      q: getQueryParam(req.query.q as any),
+    };
 
     const where: any = {};
 

@@ -17,10 +17,11 @@ const querySchema = z.object({
 zoneRoutes.get('/:zone/conditions', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { zone } = req.params;
+    const zoneParam = Array.isArray(zone) ? zone[0] : zone;
 
     const conditions = await prisma.condition.findMany({
       where: {
-        body_zones: { has: zone },
+        body_zones: { has: zoneParam },
       },
       include: {
         category: {
@@ -31,7 +32,7 @@ zoneRoutes.get('/:zone/conditions', async (req: Request, res: Response, next: Ne
     });
 
     res.json({
-      zone,
+      zone: zoneParam,
       data: conditions,
       count: conditions.length,
     });

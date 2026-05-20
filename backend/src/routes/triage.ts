@@ -46,7 +46,7 @@ triageRoutes.post('/session', async (_req: Request, res: Response, next: NextFun
  * PUT /api/v1/triage/session/:token/answer
  * Upsert an answer to the triage session.
  */
-triageRoutes.put('/session/:token/answer', async (req: Request, res: Response, next: NextFunction) => {
+triageRoutes.post('/session/:token/answer', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { token } = req.params;
     const body = answerSchema.parse(req.body);
@@ -74,7 +74,7 @@ triageRoutes.put('/session/:token/answer', async (req: Request, res: Response, n
       where: { session_token: token },
       data: {
         answers: updatedAnswers as any,
-        body_zone: typeof updatedAnswers['q2_location'] === 'string' ? (updatedAnswers['q2_location'] as string) : session.body_zone,
+        body_zone: (typeof (updatedAnswers['q2_location'] as any) === 'string' ? updatedAnswers['q2_location'] as string : session.body_zone) || undefined,
       },
     });
 
