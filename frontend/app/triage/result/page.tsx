@@ -6,6 +6,8 @@ import { useTriageStore } from "../../store/triageStore";
 import PrimaryCTAButton from "../../components/PrimaryCTAButton";
 import styles from "./page.module.css";
 
+const MINDOKTOR_GUIDE_URL = process.env.NEXT_PUBLIC_MINDOKTOR_GUIDE_URL || "https://guides.mindoktor.se";
+
 // Mock data resolution based on q2
 const RESOLUTION_MAP: Record<string, any> = {
   "Head, face or throat": {
