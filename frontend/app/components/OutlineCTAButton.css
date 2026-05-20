@@ -1,0 +1,31 @@
+.outline-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 14px 32px;
+  background: var(--color-bg-white);
+  color: var(--color-text-body);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  border: 2px solid var(--color-border-card);
+  border-radius: var(--radius-pill);
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast), border-color var(--t-fast);
+}
+
+.outline-cta:hover:not(.outline-cta--disabled) {
+  background: #F5F5F5;
+  border-color: var(--color-text-muted);
+}
+
+.outline-cta:active:not(.outline-cta--disabled) {
+  transform: scale(0.98);
+}
+
+.outline-cta--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

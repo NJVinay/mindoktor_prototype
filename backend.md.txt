@@ -1,0 +1,396 @@
+You are a senior backend engineer building the API, triage logic,
+doctor matching engine, and data layer for the "Right Door" prototype —
+an improved navigation layer on top of mindoktor.se's condition catalog.
+
+==============================================================
+TECH STACK
+==============================================================
+
+- Runtime:       Node.js 20 + TypeScript
+- Framework:     FastAPI (Python 3.11) OR Express.js — pick one
+  → Recommended: FastAPI for triage ML scoring,
+    Express.js for general API gateway
+- Database:      PostgreSQL 16 (via Supabase or local Docker)
+- ORM:           Prisma (if Express) / SQLAlchemy (if FastAPI)
+- Cache:         Redis 7 (for triage session state + autocomplete)
+- AI/NLP:        OpenAI API (GPT-4o) for Misc triage reasoning
+- Auth:          JWT for session tokens (BankID integration stubbed)
+- Search:        pg_trgm (PostgreSQL trigram) OR Typesense
+- Hosting:       Docker Compose for local dev
+- Env:           .env via python-dotenv / dotenv
+
+==============================================================
+DATA MODELS
+==============================================================
+
+--- Condition ---
+Table: conditions
+  id              UUID PRIMARY KEY
+  slug            VARCHAR(100) UNIQUE  -- e.g. "hosta" (from audit slugs)
+  name_sv         VARCHAR(200)         -- Swedish name
+  name_en         VARCHAR(200)         -- English name
+  category_id     UUID FK → categories.id
+  body_zones      TEXT[]               -- ["chest","throat"] for 3D mapping
+  severity_range  SMALLINT[2]          -- [1,3] = mild to moderate
+  typical_duration VARCHAR(50)         -- "days" | "weeks" | "chronic"
+  min_age         SMALLINT DEFAULT 0
+  tags            TEXT[]               -- ["acute","skin","women"]
+  audit_url       VARCHAR(300)         -- from mindoktor.se audit slug list
+  created_at      TIMESTAMPTZ DEFAULT now()
+
+Seed with ALL 55 conditions from mindoktor-design-audit.md
+condition URL slug inventory. Map each to body_zones for
+the 3D model raycasting integration.
+
+--- Category ---
+Table: categories
+  id          UUID PRIMARY KEY
+  key         VARCHAR(50) UNIQUE
+  name_sv     VARCHAR(100)
+  name_en     VARCHAR(100)
+  icon_name   VARCHAR(50)      -- SVG icon identifier
+  color_token VARCHAR(50)      -- maps to CSS token
+  sort_order  SMALLINT
+  is_misc     BOOLEAN DEFAULT false
+
+Seed with the 6 new groups + 1 Misc from Page 1 spec above.
+
+--- Triage Session ---
+Table: triage_sessions
+  id              UUID PRIMARY KEY
+  session_token   VARCHAR(100) UNIQUE
+  answers         JSONB        -- { q1: "today", q2: "chest", ... }
+  body_zone       VARCHAR(50)  -- from 3D model click (optional)
+  predicted_category_id UUID FK → categories.id
+  predicted_conditions  UUID[] -- top 3 matched condition IDs
+  confidence_score      FLOAT  -- 0.0–1.0
+  gpt_reasoning   TEXT         -- LLM explanation (if used)
+  recommended_doctor_id UUID FK → doctors.id
+  created_at      TIMESTAMPTZ DEFAULT now()
+  completed_at    TIMESTAMPTZ
+
+--- Doctor ---
+Table: doctors
+  id              UUID PRIMARY KEY
+  name            VARCHAR(200)
+  specialty       VARCHAR(100)
+  condition_tags  TEXT[]        -- condition keys this doctor handles
+  category_ids    UUID[]        -- FK to categories
+  body_zones      TEXT[]        -- body zones this doctor covers
+  avg_rating      FLOAT DEFAULT 4.8
+  response_time_hours FLOAT DEFAULT 2.0
+  avatar_url      VARCHAR(500)
+  is_available    BOOLEAN DEFAULT true
+  languages       TEXT[]        -- ["sv","en"]
+  created_at      TIMESTAMPTZ DEFAULT now()
+
+Seed with 6 placeholder doctors (one per category) for prototype.
+
+--- Autocomplete Index ---
+Table: search_index
+  id          UUID PRIMARY KEY
+  term        VARCHAR(200)     -- indexed condition/symptom term
+  condition_id UUID FK → conditions.id
+  weight      FLOAT DEFAULT 1.0  -- higher = surfaces earlier
+  lang        VARCHAR(5) DEFAULT 'sv'
+  -- add GIN index for pg_trgm similarity search
+
+==============================================================
+API ENDPOINTS
+==============================================================
+
+--- CATEGORIES ---
+
+GET /api/v1/categories
+  Response: all 7 categories with condition count
+  Cache: Redis 24h TTL
+
+GET /api/v1/categories/:key/conditions
+  Response: conditions in category, sorted by severity
+  Cache: Redis 1h TTL
+
+--- CONDITIONS ---
+
+GET /api/v1/conditions
+  Query params: category, zone, tag, q (search)
+  Response: paginated list
+  Full-text: use pg_trgm ILIKE % on name_sv + name_en
+
+GET /api/v1/conditions/:slug
+  Response: full condition object + related conditions
+  Cache: Redis 6h TTL
+
+--- SEARCH / AUTOCOMPLETE ---
+
+GET /api/v1/search?q={term}&lang={sv|en}&limit={5}
+  - Query search_index using pg_trgm similarity
+  - Return top 5 results: { id, slug, name, category_key,
+      body_zones, similarity_score }
+  - Debounce hint: document that frontend should debounce 300ms
+  - Cache hot queries in Redis: key=autocomplete:{term}, TTL=30min
+  - This powers the HeroSearchInput autocomplete from Page 1
+
+--- BODY ZONE MAPPING ---
+
+GET /api/v1/zones/:zone/conditions
+  Params: zone = head | chest | abdomen | back |
+          legs | skin | reproductive | full-body
+  Response: conditions matching that body zone
+  Used by: 3D model raycasting click → instant category suggestion
+
+--- TRIAGE SESSION ---
+
+POST /api/v1/triage/session
+  Body: { body_zone?: string }
+  Response: { session_token: UUID }
+  Creates empty triage_sessions row, returns token
+
+PUT /api/v1/triage/session/:token/answer
+  Body: { question_id: "q1"|"q2"|"q3"|"q4", answer: string }
+  Validate: question_id in enum, answer in allowed values
+  Action: upsert answer into triage_sessions.answers JSONB
+  Response: { session_token, answers_so_far, next_question_id | null }
+
+POST /api/v1/triage/session/:token/resolve
+  Triggered: when all 4 answers are submitted
+  Action:
+    1. Run rule-based scoring (see TRIAGE ENGINE below)
+    2. If confidence_score < 0.6: call GPT fallback
+    3. Write predicted_category_id, predicted_conditions,
+       confidence_score, gpt_reasoning to DB
+    4. Run doctor matching (see DOCTOR MATCHING below)
+    5. Write recommended_doctor_id to DB
+    6. Mark completed_at = now()
+  Response:
+    {
+      predicted_conditions: [
+        { slug, name_en, category_key, confidence: float }
+      ],
+      primary_condition: { slug, name_en, body_zones },
+      category: { key, name_en, icon_name },
+      confidence_score: float,
+      recommended_doctor: {
+        id, name, specialty, avg_rating,
+        response_time_hours, avatar_url
+      },
+      gpt_reasoning: string | null,
+      emergency: boolean
+    }
+
+GET /api/v1/triage/session/:token
+  Response: full session object including result
+
+--- DOCTOR MATCHING ---
+
+GET /api/v1/doctors/match
+  Query params: category_key, body_zone, condition_slug
+  Response: top 3 available doctors sorted by:
+    1. condition_tags overlap (most matching first)
+    2. avg_rating DESC
+    3. is_available = true first
+  Used by: result screen sidebar "Other options"
+
+==============================================================
+TRIAGE ENGINE (triage/engine.ts or triage/engine.py)
+==============================================================
+
+Build a deterministic scoring function:
+  Input: TriageAnswers { q1, q2, q3, q4, body_zone? }
+  Output: ScoringResult {
+    category_key: string,
+    condition_slugs: string[],  // top 3
+    confidence_score: number,   // 0.0–1.0
+    is_emergency: boolean
+  }
+
+RULE MATRIX — map answer combinations to categories:
+
+  q2 (location)         → primary category
+  ─────────────────────────────────────────────
+  head/face/throat      → respiratory-cold
+  chest/breathing       → respiratory-cold
+  stomach/digestion     → chronic-internal
+  skin/visible change   → skin-body
+  mental/mood           → mental-lifestyle
+  muscles/joints/back   → chronic-internal
+  private/sexual        → womens-sexual
+  not sure              → → GPT fallback
+
+  q3 (intensity) modifier:
+  severe + q1 = today   → is_emergency consideration
+  emergency             → is_emergency = true, confidence = 1.0
+
+  q1 (duration) modifier:
+  ongoing/recurring + q4 = diagnosed condition
+    → boosts chronic conditions in ranking
+
+  q4 (history) modifier:
+  first time → acute conditions ranked first
+  recurring  → chronic conditions ranked first
+  on medication → cross-check with condition.tags has "chronic"
+
+CONFIDENCE SCORING:
+  base_score = 0.5
+  + 0.2 if body_zone matches q2 location
+  + 0.15 if q1 duration is consistent with condition.typical_duration
+  + 0.1 if q4 history is consistent
+  + 0.05 if q3 intensity is within condition.severity_range
+  If no body_zone provided: base_score = 0.35
+
+EMERGENCY LOGIC:
+  if q3 == "emergency":
+    return { is_emergency: true, category: null, conditions: [] }
+    Response includes: emergency_message, emergency_number: "112"
+    Do NOT call GPT for emergency cases
+
+GPT FALLBACK (if confidence_score < 0.6 OR q2 == "not sure"):
+  Call OpenAI Chat Completions:
+  System prompt:
+    "You are a Swedish primary care triage assistant.
+    Given a patient's symptom answers, return a JSON object:
+    { category_key, top_conditions: [slug1, slug2, slug3],
+      reasoning: string (max 2 sentences),
+      confidence: float }
+    Use ONLY categories and slugs from the provided list.
+    Never diagnose — only suggest appropriate care category."
+  User prompt:
+    "Duration: {q1}. Location: {q2}. Intensity: {q3}.
+    History: {q4}. Body zone from model: {body_zone|none}.
+    Available categories: {category_keys_json}.
+    Available conditions: {condition_slugs_json}."
+  Parse response JSON → merge with rule-based result
+  Use higher confidence score of the two
+
+==============================================================
+AUTOCOMPLETE SERVICE
+==============================================================
+
+File: services/autocomplete.ts (or autocomplete.py)
+
+Function: searchConditions(query, lang, limit=5)
+  1. Normalize input: lowercase, strip diacritics
+  2. Check Redis cache: GET autocomplete:{lang}:{query}
+  3. If cache miss: run PostgreSQL query:
+     SELECT c.slug, c.name_sv, c.name_en,
+            cat.key as category_key,
+            c.body_zones,
+            similarity(si.term, $1) as score
+     FROM search_index si
+     JOIN conditions c ON si.condition_id = c.id
+     JOIN categories cat ON c.category_id = cat.id
+     WHERE si.lang = $2
+       AND si.term % $1
+     ORDER BY score DESC, si.weight DESC
+     LIMIT $3;
+  4. Cache result: SET autocomplete:{lang}:{query} TTL=1800
+  5. Return array of SearchResult objects
+
+Index to build:
+  CREATE INDEX search_index_term_trgm
+  ON search_index USING GIN (term gin_trgm_ops);
+
+==============================================================
+SESSION MANAGEMENT & SECURITY
+==============================================================
+
+- Triage session tokens: UUID v4, no auth required
+  (patient privacy — no PII stored in triage sessions)
+- Rate limiting: 60 req/min per IP on /api/v1/triage/* endpoints
+  Use: express-rate-limit OR slowapi (FastAPI)
+- CORS: allow only prototype frontend origin
+- Input validation: Zod (Express) or Pydantic (FastAPI) on all inputs
+- Sanitize all JSONB writes (prevent JSON injection)
+- Log GPT calls: always log input/output for audit trail
+  (Swedish healthcare GDPR compliance requirement)
+- No real patient data: all triage answers are anonymous sessions
+  Session data auto-deletes after 30 days (add TTL job)
+
+==============================================================
+DOCKER COMPOSE (docker-compose.yml)
+==============================================================
+
+services:
+  api:
+    build: ./backend
+    ports: ["4000:4000"]
+    env_file: .env
+    depends_on: [postgres, redis]
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: rightdoor
+      POSTGRES_USER: rightdoor
+      POSTGRES_PASSWORD: secret
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    ports: ["5432:5432"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+volumes:
+  pgdata:
+
+==============================================================
+SEED DATA REQUIREMENTS
+==============================================================
+
+Create: prisma/seed.ts OR scripts/seed.py
+
+Seed order:
+  1. categories (7 rows: 6 groups + Misc)
+  2. conditions (55 rows from mindoktor-design-audit.md slug list)
+     — map each slug to body_zones[] manually
+     — set category_id based on the 6-group mapping above
+  3. search_index (build one row per condition per language)
+     — sv: use condition.name_sv
+     — en: use condition.name_en
+     — also add common synonyms as extra rows with weight=0.8
+  4. doctors (6 placeholder rows — one per category)
+     — name: use Swedish-sounding names (audit: "Vibeke Billing")
+     — set condition_tags from that category's condition slugs
+
+==============================================================
+ENV VARIABLES (.env.example)
+==============================================================
+
+DATABASE_URL=postgresql://rightdoor:secret@localhost:5432/rightdoor
+REDIS_URL=redis://localhost:6379
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+OPENAI_MAX_TOKENS=400
+JWT_SECRET=...
+FRONTEND_ORIGIN=http://localhost:3000
+PORT=4000
+NODE_ENV=development
+
+==============================================================
+INTEGRATION CONTRACT (Frontend ↔ Backend)
+==============================================================
+
+Frontend uses these endpoints in order:
+  1. GET /api/v1/categories
+     → populate CategoryGrid tiles on Page 1
+
+  2. GET /api/v1/search?q={}&lang=en&limit=5
+     → HeroSearchInput autocomplete (debounced 300ms)
+
+  3. GET /api/v1/zones/:zone/conditions
+     → 3D model click raycasting result → instant tile highlight
+
+  4. POST /api/v1/triage/session
+     → on "Misc" tile click OR 3D model zone click → create session
+
+  5. PUT /api/v1/triage/session/:token/answer (×4)
+     → on each triage screen "Next" click
+
+  6. POST /api/v1/triage/session/:token/resolve
+     → on final question submit → get result + doctor
+
+  7. GET /api/v1/doctors/match?category_key=...
+     → populate sidebar alternative doctors on result screen
+
+All responses: JSON, Content-Type: application/json
+All errors: { error: string, code: string, status: number }
+Auth header (future): Bearer {jwt_token} — stub only for prototype

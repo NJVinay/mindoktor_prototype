@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Colors from Min Doktor design audit */
+  --color-primary: #E8251F;
+  --color-primary-hover: #C41F1A;
+  --color-primary-light: #FDE8E8;
+  --color-nav-bg: #1A2B35;
+  --color-accent-teal: #2C5364;
+  --color-bg-white: #FFFFFF;
+  --color-bg-blush: #FDF0EF;
+  --color-bg-footer: #F2F2F2;
+  --color-text-heading: #1A1A1A;
+  --color-text-body: #2D2D2D;
+  --color-text-muted: #6B7280;
+  --color-text-link: #E8251F;
+  --color-text-on-dark: #FFFFFF;
+  --color-border-card: #E5E7EB;
+  --color-border-input: #D1D5DB;
+  --color-success: #22C55E;
+  --color-chip-bg: #2C5364;
+
+  /* Typography — Sora */
+  --font-primary: 'Sora', system-ui, sans-serif;
+  --text-h1-hero: clamp(32px, 5vw, 56px);
+  --text-h2: clamp(22px, 3vw, 32px);
+  --text-h3: clamp(18px, 2vw, 24px);
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-tab: 13px;
+  --weight-black: 800;
+  --weight-bold: 700;
+  --weight-semibold: 600;
+  --weight-medium: 500;
+  --weight-regular: 400;
+
+  /* Spacing — 8px base */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --space-12: 96px;
+  --max-width: 1200px;
+  --nav-height: 56px;
+
+  /* Borders */
+  --radius-pill: 9999px;
+  --radius-card: 12px;
+  --radius-input: 8px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.10);
+  --shadow-input: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-nav: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  /* Transitions */
+  --t-fast: 0.15s ease;
+  --t-normal: 0.20s ease;
+  --t-slow: 0.30s ease;
+  --t-enter: 0.40s ease;
+}
+
+/* ===== CSS RESET ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+  color: var(--color-text-body);
+  background: var(--color-bg-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+img,
+video {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+/* Skip to content link */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: var(--space-2);
+  background: var(--color-primary);
+  color: var(--color-text-on-dark);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-input);
+  font-weight: var(--weight-semibold);
+  z-index: 10000;
+  transition: top var(--t-fast);
+}
+
+.skip-to-content:focus {
+  top: var(--space-1);
+}
+
+/* Focus visible outline for all interactive elements */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ===== LAYOUT UTILITIES ===== */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--space-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===== TYPOGRAPHY ===== */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  color: var(--color-text-heading);
+  line-height: 1.2;
+}
+
+/* ===== SCROLLBAR STYLING ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-footer);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-input);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: var(--color-primary-light);
+  color: var(--color-text-heading);
+}

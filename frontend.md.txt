@@ -1,0 +1,442 @@
+You are a senior frontend engineer building an improved prototype of
+mindoktor.se called "Right Door" — a smarter healthcare navigation
+system. Your ONLY design reference is the file mindoktor-design-audit.md.
+Extract all tokens, components and patterns from it directly.
+Do not invent any visual decisions not present in that file.
+
+==============================================================
+DESIGN SYSTEM SETUP — FROM mindoktor-design-audit.md
+==============================================================
+
+Create a global CSS token file (tokens.css) using EXACTLY these
+values from the audit:
+
+:root {
+  /* Colors */
+  --color-primary:         #E8251F;
+  --color-primary-hover:   #C41F1A;
+  --color-primary-light:   #FDE8E8;
+  --color-nav-bg:          #1A2B35;
+  --color-accent-teal:     #2C5364;
+  --color-bg-white:        #FFFFFF;
+  --color-bg-blush:        #FDF0EF;
+  --color-bg-footer:       #F2F2F2;
+  --color-text-heading:    #1A1A1A;
+  --color-text-body:       #2D2D2D;
+  --color-text-muted:      #6B7280;
+  --color-text-link:       #E8251F;
+  --color-text-on-dark:    #FFFFFF;
+  --color-border-card:     #E5E7EB;
+  --color-border-input:    #D1D5DB;
+  --color-success:         #22C55E;
+  --color-chip-bg:         #2C5364;
+
+  /* Typography — Sora (Google Fonts) */
+  --font-primary:          'Sora', system-ui, sans-serif;
+  --text-h1-hero:          clamp(32px, 5vw, 56px);
+  --text-h2:               clamp(22px, 3vw, 32px);
+  --text-h3:               clamp(18px, 2vw, 24px);
+  --text-body:             16px;
+  --text-small:            14px;
+  --text-tab:              13px;
+  --weight-black:          800;
+  --weight-bold:           700;
+  --weight-semibold:       600;
+  --weight-medium:         500;
+  --weight-regular:        400;
+
+  /* Spacing — 8px base unit */
+  --space-1:  8px;
+  --space-2:  16px;
+  --space-3:  24px;
+  --space-4:  32px;
+  --space-6:  48px;
+  --space-8:  64px;
+  --space-12: 96px;
+  --max-width: 1200px;
+  --nav-height: 56px;
+
+  /* Borders */
+  --radius-pill:   9999px;
+  --radius-card:   12px;
+  --radius-input:  8px;
+  --radius-zero:   0px;
+
+  /* Shadows */
+  --shadow-card:   0 4px 20px rgba(0,0,0,0.10);
+  --shadow-input:  0 1px 4px rgba(0,0,0,0.08);
+  --shadow-nav:    0 2px 8px rgba(0,0,0,0.08);
+
+  /* Transitions */
+  --t-fast:   0.15s ease;
+  --t-normal: 0.20s ease;
+  --t-slow:   0.30s ease;
+  --t-enter:  0.40s ease;
+}
+
+Breakpoints:
+  --bp-mobile-sm: 320px
+  --bp-mobile:    375px
+  --bp-tablet:    768px
+  --bp-desktop-sm:1024px
+  --bp-desktop:   1440px
+
+==============================================================
+TECH STACK
+==============================================================
+
+- Framework:     Next.js 14 (App Router)
+- Styling:       Tailwind CSS v4 (with tokens above as @theme)
+- 3D Engine:     Three.js + @react-three/fiber + @react-three/drei
+- State:         Zustand (client), React Query (async)
+- Animation:     Framer Motion
+- Icons:         Custom SVG (inline, matching audit: stethoscope,
+                 syringe, fork+heart, female symbol, scale)
+- Language:      TypeScript
+- API client:    axios / fetch with React Query
+
+==============================================================
+PAGE 1 — SMART CATEGORY NAVIGATOR
+==============================================================
+
+Route: /
+Purpose: Replace Min Doktor's flat 55-condition list with
+6 grouped categories + smart "Misc" triage entry.
+
+LAYOUT (matches audit's 2-col desktop hero):
+┌─────────────────────────────────────────────────────┐
+│  [TopNavBar — exact from audit component spec]       │
+│  [SecondaryTabNav — exact from audit tablist spec]   │
+├──────────────────┬──────────────────────────────────┤
+│  LEFT COL ~50%   │  RIGHT COL ~50%                  │
+│                  │                                  │
+│  H1: "Find the   │  [3D Body Model Viewer]          │
+│  right door."    │  (see 3D spec below)             │
+│                  │                                  │
+│  [CategoryGrid]  │                                  │
+│  (6 tiles +      │                                  │
+│   Misc tile)     │                                  │
+└──────────────────┴──────────────────────────────────┘
+
+CATEGORY GRID COMPONENT <CategoryGrid />
+Render 7 tiles in a 3×3 grid (last row: Misc spans full width)
+Tiles map to these 6 groups (derived from audit's condition list):
+
+  1. 🌬️ Respiratory & Cold
+     (Cough, Asthma, Sinusitis, Sore throat, Eye inflammation)
+
+  2. 🩺 Skin & Body
+     (Acne, Eczema, Rash, Birthmark, Nail fungus, Lyme disease,
+      Insect bites, Wound care)
+
+  3. 👩 Women's & Sexual Health
+     (UTI, Midwife, Contraception, PMS, Herpes, Menstrual issues,
+      Pregnancy, HPV)
+
+  4. 🧠 Mental & Lifestyle
+     (Stress, Burnout, Sleep problems, Mental illness, Anxiety,
+      Alcohol, Nicotine, Weight, Overweight, Nicotine addiction)
+
+  5. 🏥 Chronic & Internal
+     (Back pain, Osteoarthritis, Headache, Hypothyroidism,
+      Hemorrhoids, Stomach/GI, Diarrhea, Gastric catarrh)
+
+  6. 👶 Children's Health
+     (all 14 children variants from audit's /halsa-sjukdomar/-hos-barn/)
+
+  7. 🔀 Misc — "Not sure? Let us guide you."
+     (Smart triage — see Page 2)
+
+TILE COMPONENT <CategoryTile />
+  - HTML: <button role="button" aria-label="{category name}">
+  - Size: aspect-ratio: 1/1, min 140px
+  - Background: var(--color-bg-blush) default,
+    var(--color-primary-light) on hover
+  - Border: 1px solid var(--color-border-card)
+  - Border-radius: var(--radius-card) = 12px
+  - Hover: box-shadow var(--shadow-card),
+    translateY(-2px), transition var(--t-normal)
+  - Icon: Custom SVG inline (28×28px, var(--color-accent-teal))
+  - Label: H3, 16px, weight 600, var(--color-text-heading)
+  - Condition count badge: pill chip,
+    bg var(--color-chip-bg), text white, 13px (from audit chip spec)
+  - Misc tile: full-width row, bg var(--color-nav-bg),
+    text var(--color-text-on-dark), larger label
+
+WHEN TILE IS CLICKED:
+  - For categories 1–6: expand inline panel below
+    the grid showing filtered condition list
+    (pill buttons matching audit's chip style)
+  - For Misc: navigate to /triage (Page 2)
+
+==============================================================
+3D BODY MODEL VIEWER <BodyModelViewer />
+==============================================================
+
+Integrate an interactive 3D human anatomy viewer in the
+right column of the homepage hero. Reference: the "point,
+don't choose" concept from the Right Door prototype images.
+
+TECHNOLOGY:
+  - Three.js + @react-three/fiber
+  - GLTF model: human body (front-facing, neutral pose)
+    Source: use Sketchfab free anatomy model OR
+    placeholder box geometry for prototype
+  - Canvas: fills right column ~50% width, ~520px height
+
+LAYER TOGGLE SYSTEM (inspired by Google Maps layers — see image):
+  Render a floating layer switcher panel on the model viewer:
+
+  <LayerSwitcher />
+  Buttons (pill shape, var(--radius-pill), var(--color-nav-bg)):
+    [ 🧍 Full Body ]  ← default selected
+    [ 💪 Muscles  ]
+    [ 🦴 Skeleton ]
+    [ 🩸 Organs   ]
+    [ 🧠 Nervous  ]
+
+  Each button:
+    - Active state: bg var(--color-primary), text white
+    - Inactive: bg var(--color-nav-bg) at 80% opacity, text white
+    - Transition: var(--t-normal)
+    - Positioned: bottom of the 3D canvas, horizontal row
+
+  LAYER IMPLEMENTATION:
+    - Each layer = a separate Three.js mesh group
+    - Toggle visibility with mesh.visible = true/false
+    - Add subtle fade using mesh material opacity tween
+      (0→1 on show, 1→0 on hide), duration 300ms
+    - Default: Full Body visible, all others hidden
+
+INTERACTION — TAP TO TRIAGE:
+  - Add raycasting on the 3D canvas
+  - When user clicks/taps a body region:
+    * Map click → body zone (head, chest, abdomen, arms, legs, back)
+    * Dispatch zone to Zustand store: { selectedZone: 'chest' }
+    * Show tooltip: "Chest · Tap to find care" (styled as audit chip)
+    * CTA appears below model: red pill button "Find care for Chest →"
+      clicking it pre-fills triage flow on Page 2
+
+  Zone-to-category mapping:
+    head/throat → Respiratory & Cold
+    chest       → Respiratory & Cold + Chronic
+    abdomen     → Chronic & Internal
+    skin/surface → Skin & Body
+    reproductive → Women's/Men's Health
+    legs/back   → Chronic & Internal (musculoskeletal)
+    full-body   → Mental & Lifestyle
+
+  MOBILE BEHAVIOR:
+    - On <768px: 3D model moves below category grid (matches
+      audit's mobile hero stacking behavior)
+    - Touch events: use pointer events for tap-to-zone
+
+==============================================================
+PAGE 2 — SMART MISC / TRIAGE FLOW
+==============================================================
+
+Route: /triage
+Purpose: Replace "Misc" dump category with a guided
+sequential question flow that ends in a doctor recommendation.
+
+LAYOUT:
+  - Full-page, max-width var(--max-width), centered
+  - Dark nav (var(--color-nav-bg)) at top — exact audit spec
+  - Progress stepper at top: Step 1 of N (4 questions total)
+
+PROGRESS STEPPER <ProgressStepper />
+  - Horizontal bar, 4 segments
+  - Active segment: filled var(--color-primary)
+  - Inactive: var(--color-border-card)
+  - Segment transition: width 0→100%, var(--t-slow)
+  - Step label: "Step 2 of 4", 14px, var(--color-text-muted)
+
+QUESTION FLOW — 4 SCREENS:
+
+  SCREEN 1 — How long have you had this?
+    Question: "How long have you been feeling this way?"
+    Options (large pill buttons, full-width on mobile):
+      [ Just started (today) ]
+      [ A few days (2–7 days) ]
+      [ More than a week ]
+      [ Ongoing / recurring ]
+
+  SCREEN 2 — Where do you feel it?
+    Question: "Where do you feel it most?"
+    Options:
+      [ Head, face or throat ]
+      [ Chest or breathing ]
+      [ Stomach or digestion ]
+      [ Skin or a visible change ]
+      [ Mental health or mood ]
+      [ Muscles, joints or back ]
+      [ Private parts or sexual health ]
+      [ I'm not sure / General ]
+
+  SCREEN 3 — How intense is it?
+    Question: "How much is it affecting your daily life?"
+    Options:
+      [ Mild — noticeable but manageable ]
+      [ Moderate — affecting my routine ]
+      [ Severe — hard to function ]
+      [ Emergency — I need urgent help ]
+    Note: If "Emergency" selected → immediately show red warning
+    card: "Please call 112 or visit an emergency room now."
+
+  SCREEN 4 — Any history?
+    Question: "Have you had this before?"
+    Options:
+      [ First time ]
+      [ Recurring issue ]
+      [ I have a diagnosed condition ]
+      [ I take regular medication for this ]
+
+OPTION BUTTON COMPONENT <TriageOption />
+  - HTML: <button role="radio" aria-pressed="false">
+  - Width: 100% (full container width)
+  - Height: min 56px (exceeds audit's 44px tap target requirement)
+  - Background: var(--color-bg-white)
+  - Border: 1px solid var(--color-border-card)
+  - Border-radius: var(--radius-card) = 12px
+  - Selected state:
+    border-color: var(--color-primary)
+    background: var(--color-primary-light)
+    left accent bar: 4px var(--color-primary)
+  - Hover: var(--shadow-input), transition var(--t-fast)
+  - Text: 16px, weight 500, var(--color-text-body)
+  - Transition: all var(--t-normal)
+
+NAVIGATION:
+  - [Back] ghost button left — var(--color-text-muted)
+  - [Next →] pill button right — var(--color-primary)
+  - Next is disabled until an option is selected
+  - Disabled state: opacity 0.4, cursor not-allowed
+
+==============================================================
+RESULT SCREEN — DOCTOR RECOMMENDATION
+==============================================================
+
+Route: /triage/result
+Triggered: After completing all 4 triage questions
+
+LAYOUT (matches audit's 2-col split: 65% content / 35% sidebar):
+
+LEFT PANEL:
+  <RecommendationCard />
+  - Background: var(--color-bg-blush) with blob shape (audit hero)
+  - H2: "Based on your answers..."
+  - H1 (condition): dynamically resolved from triage logic
+    e.g. "You may need a doctor for: Respiratory issue"
+  - Confidence tag: pill chip, var(--color-chip-bg), white text
+    e.g. "High confidence · Acute care"
+  - Body: 2-line explanation (generated from answer combination)
+
+  <DoctorCard />
+  - Doctor avatar: circular, 64×64px,
+    border: 2px solid var(--color-primary)
+  - Doctor name: H3, var(--color-text-heading)
+  - Specialty badge: pill, var(--color-chip-bg), 13px white
+  - Rating: ★★★★★ + numeric (audit: 4.8/5 from homepage)
+  - Response time: "Usually responds in ~2 hours"
+    (from audit M7 improvement recommendation)
+  - [Start consultation →] primary CTA button
+    → navigates to guides.mindoktor.se (external BankID auth)
+
+RIGHT PANEL (sidebar — exact audit sidebar spec):
+  <AlternativeOptions />
+  Border-radius: var(--radius-card) 12px
+  Background: var(--color-bg-white)
+  Border: 1px solid var(--color-bg-footer)
+  Content:
+    - "Other options" heading (H3)
+    - Secondary condition match (if applicable)
+    - "Talk to a nurse instead" link
+    - "Find a nearby clinic" link → /vaccination/ (audit)
+    - "See FAQ" link → /vanliga-fragor-och-svar/ (audit)
+  Link color: var(--color-text-link) = #E8251F (audit)
+
+==============================================================
+SHARED COMPONENTS — EXACT FROM AUDIT
+==============================================================
+
+Build ALL of the following using the exact specs from the audit:
+
+<TopNavBar />
+  Height: 56px | BG: #1A2B35 | Logo: SVG heart + wordmark (white)
+  Desktop: [Seek care btn] [How it works] [Log in + BankID icon] [☰]
+  Mobile: logo + [Seek care] + [☰] only
+  Hamburger overlay: all links listed in audit Phase 2, §1
+
+<SecondaryTabNav />
+  Role: tablist | Height: 48px | White bg
+  Tabs: Seek care, Vaccination, Prescription, Women's health,
+        Weight loss — with SVG icons from audit
+  Active: red border-bottom var(--color-primary)
+  Mobile: horizontal scroll + right-fade gradient
+    (fixes audit H3 mobile overflow violation)
+
+<PrimaryCTAButton />
+  Pill radius | BG: #E8251F | Hover: #C41F1A | Scale(1.02)
+  Transition: var(--t-normal)
+  Min touch target: 44×44px (audit requirement)
+
+<OutlineCTAButton />
+  White bg | Dark border | Hover: #F5F5F5 bg
+  Pill radius | Min touch target: 44×44px
+
+<SuggestionChip />
+  BG: #2C5364 | Text: white | Pill radius
+  Hover: lighten to #3A6B7E | Transition: var(--t-fast)
+
+<AccordionItem />
+  Chevron rotates 180° on open | max-height expand
+  Transition: var(--t-slow) | ARIA: aria-expanded, aria-controls
+
+<BreadcrumbNav />
+  Separator: › | Link color: #E8251F
+  aria-label="breadcrumb" | aria-current="page" on last item
+  (fixes audit L10 warning)
+
+<Footer />
+  BG: #F2F2F2 | 4-column grid (logo + 3 link groups)
+  Columns: The company, The service, Support
+  LegitScript badge in bottom-left
+  Mobile: stacked single column
+
+ACCESSIBILITY FIXES (implement all from audit violations):
+  □ Add <a href="#main-content" class="skip-link">
+      Skip to main content</a> as FIRST DOM element
+      (fixes audit H5 HIGH violation)
+  □ Add role="search" on hero search form wrapper
+      (fixes audit M8 MEDIUM violation)
+  □ Fix red-on-blush: use #C41F1A on var(--color-bg-blush)
+      not #E8251F (fixes audit H7 HIGH contrast violation)
+  □ Add :focus-visible outline: 2px solid var(--color-primary)
+      on all interactive elements (fixes audit M9)
+
+==============================================================
+ROUTING (Next.js App Router)
+==============================================================
+
+app/
+├── layout.tsx          ← TopNavBar + SecondaryTabNav + Footer
+├── page.tsx            ← Page 1: Category Navigator + 3D Body
+├── triage/
+│   ├── page.tsx        ← Page 2: Smart triage question flow
+│   └── result/
+│       └── page.tsx    ← Result: Doctor recommendation
+└── globals.css         ← tokens.css vars + Sora font import
+
+==============================================================
+CONSTRAINTS
+==============================================================
+- ALL colors, fonts, spacing, border-radius, shadow and transition
+  values MUST come from mindoktor-design-audit.md — no invention
+- Component HTML structure must match the audit's observed patterns
+- Fix ALL 4 HIGH-priority violations from the audit
+- Sora font: import from Google Fonts in layout.tsx <head>
+- No external UI component libraries (no MUI, no Chakra)
+  — build all components from scratch using tokens
+- Three.js canvas must have aria-label="Interactive body model —
+  tap to select a body area" and keyboard fallback:
+  if JS disabled, show category grid only

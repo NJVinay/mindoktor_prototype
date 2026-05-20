@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String      @id @default(uuid()) @db.Uuid
+  key         String      @unique
+  name_sv     String
+  name_en     String
+  icon_name   String
+  color_token String
+  sort_order  Int
+  is_misc     Boolean     @default(false)
+
+  conditions  Condition[]
+  triageSessions TriageSession[]
+
+  @@map("categories")
+}
+
+model Condition {
+  id               String   @id @default(uuid()) @db.Uuid
+  slug             String   @unique
+  name_sv          String
+  name_en          String
+  category_id      String   @db.Uuid
+  category         Category @relation(fields: [category_id], references: [id])
+  body_zones       String[]
+  layers           String[] @default([])
+  questions        String[] @default([])
+  specialist_type  String?
+  severity_min     Int
+  severity_max     Int
+  typical_duration String
+  min_age          Int      @default(0)
+  tags             String[]
+  audit_url        String?
+
+  searchIndexes    SearchIndex[]
+
+  @@map("conditions")
+}
+
+model Doctor {
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String
+  specialty           String
+  condition_tags      String[]
+  body_zones          String[]
+  avg_rating          Float    @default(4.8)
+  response_time_hours Float    @default(2.0)
+  avatar_url          String?
+  is_available        Boolean  @default(true)
+  languages           String[]
+
+  triageSessions      TriageSession[]
+
+  @@map("doctors")
+}
+
+model TriageSession {
+  id                    String    @id @default(uuid()) @db.Uuid
+  session_token         String    @unique
+  answers               Json      @default("{}")
+  body_zone             String?
+  predicted_category_id String?   @db.Uuid
+  predicted_category    Category? @relation(fields: [predicted_category_id], references: [id])
+  predicted_conditions  String[]
+  confidence_score      Float?
+  gpt_reasoning         String?
+  recommended_doctor_id String?   @db.Uuid
+  recommended_doctor    Doctor?   @relation(fields: [recommended_doctor_id], references: [id])
+  created_at            DateTime  @default(now())
+  completed_at          DateTime?
+
+  @@map("triage_sessions")
+}
+
+model SearchIndex {
+  id           String    @id @default(uuid()) @db.Uuid
+  term         String
+  condition_id String    @db.Uuid
+  condition    Condition @relation(fields: [condition_id], references: [id])
+  weight       Float     @default(1.0)
+  lang         String    @default("sv")
+
+  @@map("search_index")
+}

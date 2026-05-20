@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MindDoktor — Find the right care</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #ffffff;
+    --surface2: #eeeae3;
+    --text: #1a1814;
+    --text2: #6b6660;
+    --text3: #9e9890;
+    --accent: #2d6a4f;
+    --accent2: #52b788;
+    --accent-light: #d8f3dc;
+    --warn: #b5451b;
+    --warn-light: #fdeede;
+    --border: rgba(30,24,18,0.10);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 18px; height: 18px; fill: white; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text); }
+  .logo-text span { color: var(--accent); }
+  .step-indicator { display: flex; align-items: center; gap: 6px; }
+  .step-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); transition: all 0.3s;
+  }
+  .step-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+  .step-dot.done { background: var(--accent2); }
+
+  /* ── Layout ── */
+  .app { display: grid; grid-template-columns: 1fr 380px; min-height: calc(100vh - 61px); }
+  @media (max-width: 780px) { .app { grid-template-columns: 1fr; } }
+
+  /* ── Body Map Panel ── */
+  .body-panel {
+    padding: 32px;
+    display: flex; flex-direction: column; align-items: center;
+    position: relative;
+  }
+  .panel-heading { font-family: 'DM Serif Display', serif; font-size: 26px; color: var(--text); margin-bottom: 6px; }
+  .panel-sub { color: var(--text2); font-size: 14px; margin-bottom: 24px; }
+
+  /* Layer toggle */
+  .layer-bar {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 28px; justify-content: center;
+  }
+  .layer-btn {
+    padding: 7px 14px; border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text2);
+    font-size: 13px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all 0.2s; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .layer-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .layer-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .layer-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .layer-btn.active .dot { background: rgba(255,255,255,0.7); }
+
+  /* SVG body */
+  .body-wrap { position: relative; width: 100%; max-width: 320px; }
+  .body-wrap svg { width: 100%; height: auto; }
+
+  /* Clickable regions — hover glow */
+  .region {
+    cursor: pointer; transition: all 0.2s;
+  }
+  .region:hover path, .region:hover ellipse, .region:hover rect, .region:hover circle {
+    filter: brightness(0.88);
+  }
+  .region.selected path, .region.selected ellipse,
+  .region.selected rect, .region.selected circle {
+    filter: drop-shadow(0 0 6px rgba(45,106,79,0.6));
+  }
+  .region-label {
+    pointer-events: none; font-size: 10px; fill: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+
+  /* Welcome state */
+  .welcome {
+    padding: 40px 28px;
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 16px; height: 100%;
+  }
+  .welcome-icon {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: var(--accent-light); display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .welcome h2 { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1.3; }
+  .welcome p { color: var(--text2); font-size: 14px; line-height: 1.6; }
+  .tip-card {
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 14px 16px; width: 100%;
+    border-left: 3px solid var(--accent2);
+  }
+  .tip-card p { font-size: 13px; color: var(--text2); }
+
+  /* Region selected → layer pick / disease list */
+  .panel-section { padding: 24px 24px 0; }
+  .panel-section:last-child { padding-bottom: 24px; }
+  .section-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text3); font-weight: 600; margin-bottom: 12px;
+  }
+  .selected-region-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-light); border-radius: 20px;
+    padding: 6px 14px; font-size: 14px; font-weight: 500; color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  /* Layer selector in right panel */
+  .layer-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .layer-card {
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px 12px; cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; gap: 5px;
+    background: var(--surface);
+  }
+  .layer-card:hover { border-color: var(--accent); background: var(--accent-light); }
+  .layer-card.active { border-color: var(--accent); background: var(--accent-light); }
+  .layer-card-icon { font-size: 20px; }
+  .layer-card-name { font-weight: 600; font-size: 14px; }
+  .layer-card-count { font-size: 12px; color: var(--text2); }
+
+  /* Disease list */
+  .disease-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+  .disease-item {
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 14px 16px; cursor: pointer; transition: all 0.2s;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+  }
+  .disease-item:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+  .disease-item.selected { border-color: var(--accent); background: var(--accent-light); }
+  .disease-name { font-weight: 500; font-size: 14px; }
+  .disease-tags { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
+  .disease-tag {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    background: var(--surface2); color: var(--text2); font-weight: 500;
+  }
+  .disease-arrow { color: var(--text3); font-size: 18px; }
+
+  /* MCQ flow */
+  .mcq-wrap { padding: 24px; }
+  .mcq-progress {
+    display: flex; gap: 4px; margin-bottom: 20px;
+  }
+  .mcq-bar { height: 3px; border-radius: 2px; flex: 1; background: var(--border); transition: background 0.3s; }
+  .mcq-bar.done { background: var(--accent); }
+  .mcq-bar.current { background: var(--accent2); }
+
+  .question-card {
+    background: var(--bg); border-radius: var(--radius);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .question-text { font-weight: 500; font-size: 15px; margin-bottom: 14px; line-height: 1.4; }
+  .answer-list { display: flex; flex-direction: column; gap: 8px; }
+  .answer-btn {
+    padding: 12px 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: var(--surface);
+    text-align: left; cursor: pointer; font-size: 14px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .answer-btn:hover { border-color: var(--accent); background: var(--accent-light); }
+  .answer-btn.selected { border-color: var(--accent); background: var(--accent-light); font-weight: 500; }
+
+  /* Result */
+  .result-card {
+    background: var(--accent); color: white;
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  }
+  .result-card .result-label { font-size: 12px; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .result-card .result-disease { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 6px; }
+  .result-card .result-conf { font-size: 13px; opacity: 0.85; }
+  .result-alts { display: flex; flex-direction: column; gap: 8px; }
+  .result-alt {
+    background: var(--bg); border-radius: var(--radius-sm);
+    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .result-alt .alt-name { font-weight: 500; font-size: 14px; }
+  .result-alt .alt-pct { font-size: 13px; color: var(--text2); }
+  .book-btn {
+    width: 100%; padding: 15px; border-radius: var(--radius);
+    background: var(--accent); color: white; border: none;
+    font-size: 16px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; transition: all 0.2s; margin-top: 16px;
+  }
+  .book-btn:hover { background: #1e4d38; transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+
+  /* Nav buttons */
+  .nav-row {
+    display: flex; gap: 10px; padding: 16px 24px;
+    border-top: 1px solid var(--border); margin-top: auto;
+    background: var(--surface);
+    position: sticky; bottom: 0;
+  }
+  .btn-back {
+    flex: 1; padding: 11px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text2);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-back:hover { border-color: var(--text2); color: var(--text); }
+  .btn-next {
+    flex: 2; padding: 11px; border-radius: var(--radius-sm);
+    border: none; background: var(--accent); color: white;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-next:hover { background: #1e4d38; }
+  .btn-next:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+
+  .divider { height: 1px; background: var(--border); margin: 0 24px; }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed; background: var(--text); color: white;
+    padding: 5px 10px; border-radius: 6px; font-size: 12px;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s;
+    z-index: 999; white-space: nowrap;
+  }
+  .tooltip.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="tooltip" id="tooltip"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+    </div>
+    <span class="logo-text">Mind<span>Doktor</span></span>
+  </div>
+  <div class="step-indicator" id="stepDots">
+    <div class="step-dot active" title="Select body part"></div>
+    <div class="step-dot" title="Select tissue layer"></div>
+    <div class="step-dot" title="Select condition"></div>
+    <div class="step-dot" title="Questions"></div>
+    <div class="step-dot" title="Results"></div>
+  </div>
+</header>
+
+<div class="app">
+  <!-- LEFT: Body map -->
+  <div class="body-panel">
+    <h1 class="panel-heading">Where are you experiencing issues?</h1>
+    <p class="panel-sub">Click on the part of the body where you feel symptoms</p>
+
+    <!-- Layer toggle bar -->
+    <div class="layer-bar" id="layerBar" style="display:none">
+      <button class="layer-btn active" data-layer="all" onclick="setLayer('all',this)">
+        <span class="dot" style="background:#888"></span> All layers
+      </button>
+      <button class="layer-btn" data-layer="skin" onclick="setLayer('skin',this)">
+        <span class="dot" style="background:#e07b54"></span> Skin
+      </button>
+      <button class="layer-btn" data-layer="muscle" onclick="setLayer('muscle',this)">
+        <span class="dot" style="background:#c0392b"></span> Muscles
+      </button>
+      <button class="layer-btn" data-layer="bone" onclick="setLayer('bone',this)">
+        <span class="dot" style="background:#b8a99a"></span> Bones/Joints
+      </button>
+      <button class="layer-btn" data-layer="nerve" onclick="setLayer('nerve',this)">
+        <span class="dot" style="background:#f1c40f"></span> Nerves
+      </button>
+      <button class="layer-btn" data-layer="organ" onclick="setLayer('organ',this)">
+        <span class="dot" style="background:#8e44ad"></span> Organs
+      </button>
+    </div>
+
+    <!-- SVG Body Map -->
+    <div class="body-wrap">
+      <svg viewBox="0 0 200 520" xmlns="http://www.w3.org/2000/svg" id="bodySvg">
+        <!-- HEAD -->
+        <g class="region" id="r-head" data-region="head" data-name="Head" onclick="selectRegion('head','Head')">
+          <ellipse cx="100" cy="42" rx="32" ry="38" fill="#e8c9a0" stroke="#c9a87c" stroke-width="1"/>
+          <!-- Eyes -->
+          <ellipse cx="89" cy="38" rx="4" ry="3" fill="#fff" stroke="#aaa" stroke-width="0.5"/>
+          <ellipse cx="111" cy="38" rx="4" ry="3" fill="#fff" stroke="#aaa" stroke-width="0.5"/>
+          <circle cx="90" cy="38" r="1.5" fill="#5d4037"/>
+          <circle cx="112" cy="38" r="1.5" fill="#5d4037"/>
+          <!-- Nose -->
+          <path d="M100 42 Q97 48 95 50 Q100 52 105 50 Q103 48 100 42" fill="none" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Mouth -->
+          <path d="M93 56 Q100 61 107 56" fill="none" stroke="#a0785a" stroke-width="1" stroke-linecap="round"/>
+        </g>
+
+        <!-- NECK -->
+        <g class="region" id="r-neck" data-region="neck" data-name="Neck" onclick="selectRegion('neck','Neck')">
+          <rect x="88" y="78" width="24" height="18" rx="4" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- CHEST -->
+        <g class="region" id="r-chest" data-region="chest" data-name="Chest" onclick="selectRegion('chest','Chest')">
+          <path d="M58 96 Q60 94 100 93 Q140 94 142 96 L148 160 Q120 168 100 167 Q80 168 52 160 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Sternum line -->
+          <line x1="100" y1="96" x2="100" y2="162" stroke="#c9a87c" stroke-width="0.5" stroke-dasharray="3,3"/>
+        </g>
+
+        <!-- ABDOMEN -->
+        <g class="region" id="r-abdomen" data-region="abdomen" data-name="Abdomen" onclick="selectRegion('abdomen','Abdomen')">
+          <path d="M54 162 Q80 170 100 169 Q120 170 146 162 L148 220 Q120 228 100 228 Q80 228 52 220 Z" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- LEFT SHOULDER / UPPER ARM -->
+        <g class="region" id="r-left-arm" data-region="left-arm" data-name="Left arm" onclick="selectRegion('left-arm','Left arm')">
+          <path d="M56 97 Q42 102 32 120 L22 200 Q28 204 36 200 L48 140 Q55 120 60 100 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Elbow -->
+          <ellipse cx="28" cy="200" rx="8" ry="6" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Forearm -->
+          <path d="M20 204 Q14 230 16 260 Q18 268 24 270 Q30 268 34 260 L36 204 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Hand -->
+          <ellipse cx="20" cy="278" rx="9" ry="12" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- RIGHT SHOULDER / UPPER ARM -->
+        <g class="region" id="r-right-arm" data-region="right-arm" data-name="Right arm" onclick="selectRegion('right-arm','Right arm')">
+          <path d="M144 97 Q158 102 168 120 L178 200 Q172 204 164 200 L152 140 Q145 120 140 100 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="172" cy="200" rx="8" ry="6" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <path d="M180 204 Q186 230 184 260 Q182 268 176 270 Q170 268 166 260 L164 204 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="180" cy="278" rx="9" ry="12" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- GROIN/PELVIS -->
+        <g class="region" id="r-pelvis" data-region="pelvis" data-name="Groin/Pelvis" onclick="selectRegion('pelvis','Groin/Pelvis')">
+          <path d="M54 222 Q80 230 100 230 Q120 230 146 222 L148 262 Q120 272 100 272 Q80 272 52 262 Z" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- LEFT THIGH -->
+        <g class="region" id="r-left-leg" data-region="left-leg" data-name="Left leg" onclick="selectRegion('left-leg','Left leg')">
+          <path d="M54 264 Q68 272 80 272 L74 360 Q64 365 56 360 L46 278 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Knee -->
+          <ellipse cx="64" cy="364" rx="13" ry="8" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Shin -->
+          <path d="M52 368 Q48 420 50 458 Q56 466 64 464 Q72 462 72 454 L74 370 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <!-- Foot -->
+          <ellipse cx="56" cy="470" rx="14" ry="8" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="70" cy="472" rx="8" ry="6" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- RIGHT THIGH -->
+        <g class="region" id="r-right-leg" data-region="right-leg" data-name="Right leg" onclick="selectRegion('right-leg','Right leg')">
+          <path d="M146 264 Q132 272 120 272 L126 360 Q136 365 144 360 L154 278 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="136" cy="364" rx="13" ry="8" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <path d="M148 368 Q152 420 150 458 Q144 466 136 464 Q128 462 128 454 L126 370 Z" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="144" cy="470" rx="14" ry="8" fill="#ddbf90" stroke="#c9a87c" stroke-width="0.8"/>
+          <ellipse cx="130" cy="472" rx="8" ry="6" fill="#e8c9a0" stroke="#c9a87c" stroke-width="0.8"/>
+        </g>
+
+        <!-- Region labels (visible on hover) -->
+        <text class="region-label" x="100" y="14" text-anchor="middle">Head</text>
+        <text class="region-label" x="100" y="130" text-anchor="middle">Chest</text>
+        <text class="region-label" x="100" y="195" text-anchor="middle">Abdomen</text>
+        <text class="region-label" x="18" y="155" text-anchor="middle" transform="rotate(-5,18,155)">L. arm</text>
+        <text class="region-label" x="182" y="155" text-anchor="middle" transform="rotate(5,182,155)">R. arm</text>
+        <text class="region-label" x="60" y="316" text-anchor="middle">L. leg</text>
+        <text class="region-label" x="140" y="316" text-anchor="middle">R. leg</text>
+        <text class="region-label" x="100" y="245" text-anchor="middle">Groin</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- RIGHT: Dynamic panel -->
+  <div class="right-panel" id="rightPanel">
+    <!-- Step 0: Welcome -->
+    <div class="welcome" id="stepWelcome">
+      <div class="welcome-icon">🩺</div>
+      <h2>Find the right specialist directly</h2>
+      <p>Select where on your body you have symptoms — we will help you navigate to the right care without unnecessary waiting times.</p>
+      <div class="tip-card">
+        <p>💡 <strong>How it works:</strong> Click on the body part → select tissue layer → answer a few short questions → get booked with the right doctor.</p>
+      </div>
+      <div class="tip-card" style="border-left-color: #e07b54;">
+        <p>🏥 <strong>55 treatment areas</strong> covered. Avoids incorrect categorization and unnecessary wait time.</p>
+      </div>
+    </div>
+
+    <!-- Step 1: Layer selection -->
+    <div id="stepLayer" style="display:none; flex:1; display:flex; flex-direction:column; overflow-y:auto;">
+      <div class="panel-section">
+        <div class="section-label">Selected area</div>
+        <div class="selected-region-badge" id="regionBadge">📍 —</div>
+        <div class="section-label">Which layer is affected?</div>
+        <div class="layer-grid" id="layerGrid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack(1)">← Change</button>
+        <button class="btn-next" id="nextToDisease" onclick="goStep(2)" disabled>Show conditions →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Disease list -->
+    <div id="stepDisease" style="display:none; flex:1; flex-direction:column; overflow-y:auto;">
+      <div class="panel-section">
+        <div class="section-label">Matching conditions</div>
+        <div class="disease-list" id="diseaseList"></div>
+        <p style="font-size:12px;color:var(--text3);margin-top:8px;">Click on a condition to answer follow-up questions</p>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack(2)">← Layers</button>
+        <button class="btn-next" id="nextToMCQ" onclick="goStep(3)" disabled>Answer questions →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: MCQ -->
+    <div id="stepMCQ" style="display:none; flex:1; flex-direction:column; overflow-y:auto;">
+      <div class="mcq-wrap">
+        <div class="mcq-progress" id="mcqProgress"></div>
+        <div id="mcqQuestion"></div>
+        <div class="answer-list" id="mcqAnswers"></div>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack(3)">← Condition</button>
+        <button class="btn-next" id="nextToResult" onclick="nextQuestion()" disabled>Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Result -->
+    <div id="stepResult" style="display:none; flex:1; flex-direction:column; overflow-y:auto;">
+      <div style="padding:24px">
+        <div class="section-label" style="margin-bottom:12px">Our assessment</div>
+        <div class="result-card" id="resultCard"></div>
+        <div class="section-label" style="margin-bottom:10px;margin-top:16px">Other possible conditions</div>
+        <div class="result-alts" id="resultAlts"></div>
+        <button class="book-btn" onclick="alert('Booking opens in the Min Doktor app 📱')">Book the right specialist now →</button>
+        <p style="text-align:center;font-size:12px;color:var(--text3);margin-top:10px">You are sent directly to the right doctor — no re-booking</p>
+      </div>
+      <div class="nav-row">
+        <button class="btn-back" onclick="goBack(4)">← Change answers</button>
+        <button class="btn-next" onclick="resetAll()">Start over</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// DISEASE DATABASE
+// region: head|neck|chest|abdomen|pelvis|left-arm|right-arm|left-leg|right-leg
+// layers: skin|muscle|bone|nerve|organ
+// ──────────────────────────────────────────────
+const diseases = [
+  // HEAD
+  { id:'migran', name:'Migraine', region:['head'], layers:['nerve'], specialist:'Neurologist', tags:['Headache','Neurological'], questions:['hur_lange','intensitet','symptom_extra'] },
+  { id:'sinuit', name:'Sinusitis', region:['head'], layers:['organ'], specialist:'ENT Specialist', tags:['Infection','ENT'], questions:['hur_lange','feber','snuva'] },
+  { id:'konjunktivit', name:'Conjunctivitis (Pink Eye)', region:['head'], layers:['skin','organ'], specialist:'Ophthalmologist', tags:['Eyes','Infection'], questions:['hur_lange','spridning'] },
+  { id:'otit', name:'Otitis (Ear Infection)', region:['head','neck'], layers:['organ'], specialist:'ENT Specialist', tags:['Ears','Infection'], questions:['hur_lange','feber','smärta'] },
+  { id:'ansiktseksem', name:'Eczema (face)', region:['head'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Chronic'], questions:['hur_lange','klada','spridning'] },
+  { id:'herpes_labialis', name:'Cold Sore (herpes)', region:['head'], layers:['skin'], specialist:'General Practitioner', tags:['Skin','Viral'], questions:['hur_lange','upprepat'] },
+  { id:'acne', name:'Acne', region:['head','chest'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Hormonal'], questions:['hur_lange','svaret','hormonell'] },
+  { id:'yrsel', name:'Dizziness/Vertigo', region:['head'], layers:['nerve'], specialist:'Neurologist', tags:['Neurological'], questions:['hur_lange','intensitet','utlosare'] },
+
+  // NECK
+  { id:'halsfluss', name:'Tonsillitis', region:['neck'], layers:['organ'], specialist:'ENT Specialist', tags:['Infection','ENT'], questions:['hur_lange','feber','svaljer'] },
+  { id:'laryngit', name:'Laryngitis', region:['neck'], layers:['organ'], specialist:'ENT Specialist', tags:['Voice','Infection'], questions:['hur_lange','rosta','feber'] },
+  { id:'whiplash', name:'Whiplash/Neck Injury', region:['neck'], layers:['muscle','bone'], specialist:'Orthopedist', tags:['Injury','Musculoskeletal'], questions:['hur_lange','trauma','rorrelsehinder'] },
+
+  // CHEST
+  { id:'astma', name:'Asthma', region:['chest'], layers:['organ'], specialist:'Pulmonologist', tags:['Respiratory','Chronic'], questions:['hur_lange','utlosare','natt'] },
+  { id:'bronkit', name:'Bronchitis', region:['chest'], layers:['organ'], specialist:'General Practitioner', tags:['Respiratory','Infection'], questions:['hur_lange','feber','hosta'] },
+  { id:'hypertoni', name:'High Blood Pressure', region:['chest'], layers:['organ'], specialist:'Internal Medicine Specialist', tags:['Heart','Chronic'], questions:['hur_lange','symtom','medicin'] },
+  { id:'angina', name:'Angina', region:['chest'], layers:['organ'], specialist:'Cardiologist', tags:['Heart','Acute'], questions:['hur_lange','utstrålning','anstrangning'] },
+  { id:'brost_eksem', name:'Chest Eczema', region:['chest'], layers:['skin'], specialist:'Dermatologist', tags:['Skin'], questions:['hur_lange','klada','spridning'] },
+  { id:'muskelspanning_brost', name:'Muscle Tension (chest)', region:['chest'], layers:['muscle'], specialist:'Physiotherapist', tags:['Musculoskeletal'], questions:['hur_lange','trauma','rorrelsehinder'] },
+
+  // ABDOMEN
+  { id:'ibs', name:'IBS (Irritable Bowel Syndrome)', region:['abdomen'], layers:['organ'], specialist:'Gastroenterologist', tags:['Gastrointestinal','Chronic'], questions:['hur_lange','utlosare','avforing'] },
+  { id:'uvi', name:'UTI (Urinary Tract Infection)', region:['abdomen','pelvis'], layers:['organ'], specialist:'General Practitioner', tags:['Infection','Urinary'], questions:['hur_lange','sveda','feber'] },
+  { id:'gastrit', name:'Gastritis / Stomach Ulcer', region:['abdomen'], layers:['organ'], specialist:'Gastroenterologist', tags:['Gastrointestinal'], questions:['hur_lange','smärta','ater'] },
+  { id:'appendicit', name:'Appendicitis', region:['abdomen'], layers:['organ'], specialist:'Surgeon', tags:['Acute','Gastrointestinal'], questions:['hur_lange','smärta','feber'] },
+  { id:'diabetes', name:'Type 2 Diabetes', region:['abdomen'], layers:['organ'], specialist:'Internal Medicine Specialist', tags:['Metabolic','Chronic'], questions:['hur_lange','symtom','arf'] },
+  { id:'gallsten', name:'Gallstones', region:['abdomen'], layers:['organ'], specialist:'Surgeon', tags:['Gastrointestinal','Fatty-foods'], questions:['hur_lange','smärta','mat'] },
+
+  // PELVIS
+  { id:'sti', name:'Sexually Transmitted Infection (STI)', region:['pelvis'], layers:['skin','organ'], specialist:'Venereologist', tags:['Sexual Health','Infection'], questions:['hur_lange','partner','symptom_extra'] },
+  { id:'endometrios', name:'Endometriosis', region:['pelvis'], layers:['organ'], specialist:'Gynecologist', tags:['Chronic','Gynecology'], questions:['hur_lange','mens','smärta'] },
+  { id:'pcos', name:'PCOS', region:['pelvis'], layers:['organ'], specialist:'Gynecologist', tags:['Hormonal','Gynecology'], questions:['hur_lange','mens','hormonell'] },
+  { id:'hemorrojder', name:'Hemorrhoids', region:['pelvis'], layers:['skin','organ'], specialist:'Surgeon', tags:['Gastrointestinal'], questions:['hur_lange','blod','smärta'] },
+
+  // ARMS
+  { id:'karpaltunnel', name:'Carpal Tunnel Syndrome', region:['left-arm','right-arm'], layers:['nerve'], specialist:'Neurologist', tags:['Neurological','Musculoskeletal'], questions:['hur_lange','natt','domning'] },
+  { id:'tennisarmbage', name:'Tennis Elbow', region:['left-arm','right-arm'], layers:['muscle','bone'], specialist:'Orthopedist', tags:['Musculoskeletal'], questions:['hur_lange','belastning','rorrelsehinder'] },
+  { id:'eksem_hand', name:'Hand Eczema', region:['left-arm','right-arm'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Chronic'], questions:['hur_lange','klada','yrke'] },
+  { id:'fraktur_arm', name:'Fracture / Joint Injury (arm)', region:['left-arm','right-arm'], layers:['bone'], specialist:'Orthopedist', tags:['Injury','Acute'], questions:['trauma','smärta','svullnad'] },
+  { id:'psoriasis_arm', name:'Psoriasis (arm)', region:['left-arm','right-arm'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Chronic'], questions:['hur_lange','klada','arf'] },
+  { id:'axeltendinit', name:'Shoulder Tendinitis', region:['left-arm','right-arm'], layers:['muscle'], specialist:'Orthopedist', tags:['Musculoskeletal'], questions:['hur_lange','rorrelsehinder','natt'] },
+
+  // LEGS
+  { id:'knäartros', name:'Knee Osteoarthritis', region:['left-leg','right-leg'], layers:['bone'], specialist:'Orthopedist', tags:['Musculoskeletal','Chronic'], questions:['hur_lange','rorrelsehinder','svullnad'] },
+  { id:'plantar_fasciit', name:'Heel Spur / Plantar Fasciitis', region:['left-leg','right-leg'], layers:['muscle','bone'], specialist:'Orthopedist', tags:['Musculoskeletal'], questions:['hur_lange','belastning','smärta'] },
+  { id:'bensår', name:'Leg Ulcers', region:['left-leg','right-leg'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Vascular'], questions:['hur_lange','diabetes','svullnad'] },
+  { id:'djup_ventrombos', name:'DVT (Blood Clot)', region:['left-leg','right-leg'], layers:['organ'], specialist:'Vascular Surgeon', tags:['Vascular','Acute'], questions:['hur_lange','svullnad','smärta'] },
+  { id:'fotsvamp', name:'Athlete\'s Foot / Nail Fungus', region:['left-leg','right-leg'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Fungal'], questions:['hur_lange','spridning','upprepat'] },
+  { id:'ischiassmärta', name:'Sciatica / Lumbago', region:['left-leg','right-leg','abdomen'], layers:['nerve','muscle'], specialist:'Neurologist', tags:['Neurological','Musculoskeletal'], questions:['hur_lange','utstrålning','rorrelsehinder'] },
+  { id:'atopisk_dermatit', name:'Atopic Dermatitis (eczema)', region:['left-leg','right-leg','left-arm','right-arm'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Chronic'], questions:['hur_lange','klada','arf'] },
+
+  // SYSTEMIC (multiple regions)
+  { id:'psoriasis', name:'Psoriasis', region:['head','chest','left-arm','right-arm','left-leg','right-leg'], layers:['skin'], specialist:'Dermatologist', tags:['Skin','Chronic','Autoimmune'], questions:['hur_lange','klada','arf'] },
+  { id:'utmattning', name:'Burnout / Chronic Fatigue Syndrome', region:['head','chest'], layers:['nerve','organ'], specialist:'Psychologist/Psychiatrist', tags:['Mental Health','Chronic'], questions:['hur_lange','stress','jobb'] },
+  { id:'depression', name:'Depression', region:['head'], layers:['nerve'], specialist:'Psychologist', tags:['Mental Health'], questions:['hur_lange','stämning','sömn'] },
+  { id:'ångest', name:'Anxiety / Panic Attacks', region:['head','chest'], layers:['nerve'], specialist:'Psychologist', tags:['Mental Health'], questions:['hur_lange','utlosare','panik'] },
+];
+
+// MCQ QUESTION BANK
+const questionBank = {
+  hur_lange: {
+    text: 'How long have you had these symptoms?',
+    answers: ['A few hours / today', '1–7 days', '1–4 weeks', 'More than a month', 'Several months or more']
+  },
+  feber: {
+    text: 'Have you or have you had a fever?',
+    answers: ['No, no fever', 'Low-grade (< 38.5°C)', 'High fever (≥ 38.5°C)', 'Don\'t know']
+  },
+  smärta: {
+    text: 'How intense is the pain?',
+    answers: ['Mild — barely noticeable', 'Moderate — clearly noticeable', 'Severe — hard to ignore', 'Very severe — debilitating']
+  },
+  intensitet: {
+    text: 'How severe are your symptoms right now?',
+    answers: ['Mild', 'Moderate', 'Severe', 'Extreme / unbearable']
+  },
+  klada: {
+    text: 'Do you have itching in the affected area?',
+    answers: ['No itching', 'Mild itching', 'Intense itching', 'Itching prevents sleep']
+  },
+  spridning: {
+    text: 'Have the symptoms spread to more places?',
+    answers: ['No, localized', 'Slightly, but limited', 'Yes, clearly spread', 'Hard to say']
+  },
+  upprepat: {
+    text: 'Have you had similar symptoms before?',
+    answers: ['No, first time', 'Yes, occasionally', 'Yes, recurring', 'Have it often / chronic']
+  },
+  rorrelsehinder: {
+    text: 'Is your mobility affected?',
+    answers: ['No, moving normally', 'Slightly limited', 'Noticeably limited', 'Almost impossible to move']
+  },
+  svullnad: {
+    text: 'Is there visible swelling?',
+    answers: ['No swelling', 'Slightly swollen', 'Clearly swollen', 'Severe swelling']
+  },
+  trauma: {
+    text: 'Did an accident or injury precede the symptoms?',
+    answers: ['No, started spontaneously', 'Maybe — slightly unexpected', 'Yes, clear event', 'Yes, severe accident/fall']
+  },
+  domning: {
+    text: 'Do you feel numbness, tingling, or weakness?',
+    answers: ['No', 'Sometimes slight tingling', 'Yes, numbness/tingling often', 'Yes, plus muscle weakness']
+  },
+  natt: {
+    text: 'Are the symptoms worse at night or early in the morning?',
+    answers: ['No, no difference', 'Slightly worse at night', 'Clearly worse at night', 'Wake up from symptoms']
+  },
+  utlosare: {
+    text: 'Do you notice what triggers or worsens the symptoms?',
+    answers: ['No, no clear triggers', 'Stress', 'Physical exertion', 'Food / allergens', 'Weather / cold']
+  },
+  belastning: {
+    text: 'Do the symptoms occur during exertion/movement?',
+    answers: ['No, symptoms at rest', 'Yes, during movement', 'Yes, during heavy exertion', 'Always, regardless']
+  },
+  stress: {
+    text: 'Do you experience high stress in daily life?',
+    answers: ['No, low stress', 'Moderate stress', 'High stress', 'Extreme stress / burnout']
+  },
+  sömn: {
+    text: 'How is your sleep?',
+    answers: ['Good sleep', 'Slightly disturbed sleep', 'Regular sleep problems', 'Sleep very poorly']
+  },
+  arf: {
+    text: 'Is this hereditary in your family?',
+    answers: ['Don\'t know', 'No', 'Possibly', 'Yes, in close family']
+  },
+  hormonell: {
+    text: 'Do you have hormonal changes (menstruation, pregnancy, menopause)?',
+    answers: ['No / not relevant', 'Possibly', 'Yes, likely linked', 'Yes, clear correlation']
+  },
+  mens: {
+    text: 'Are the symptoms linked to the menstrual cycle?',
+    answers: ['No', 'Slightly', 'Clear correlation', 'Don\'t know']
+  },
+  avforing: {
+    text: 'Do you have changes in your stool?',
+    answers: ['No, normal', 'Loose stool', 'Constipation', 'Alternating / irregular']
+  },
+  hosta: {
+    text: 'Character of the cough?',
+    answers: ['Dry cough', 'Wet cough with mucus', 'Bloody cough', 'Night cough']
+  },
+  snuva: {
+    text: 'Do you have a runny or stuffy nose?',
+    answers: ['No', 'Slight runny nose', 'Heavy runny nose', 'Stuffy nose without runny nose']
+  },
+  svaljer: {
+    text: 'How much does it hurt to swallow?',
+    answers: ['Swallow normally', 'Slight discomfort', 'Painful', 'Almost impossible to swallow']
+  },
+  rosta: {
+    text: 'Do you have hoarseness or have you lost your voice?',
+    answers: ['No', 'Slightly hoarse', 'Clearly hoarse', 'Have lost voice']
+  },
+  sveda: {
+    text: 'Do you have burning when urinating?',
+    answers: ['No', 'Slightly', 'Yes, clear burning', 'Yes, severe burning']
+  },
+  partner: {
+    text: 'Has your partner had similar symptoms?',
+    answers: ['No / don\'t know', 'Possibly', 'Yes', 'Don\'t have a partner']
+  },
+  symptom_extra: {
+    text: 'Do you have other symptoms besides the most common ones?',
+    answers: ['No', 'Nausea', 'Sensitivity to light/sound', 'Visual disturbances', 'Several of these']
+  },
+  mat: {
+    text: 'Are symptoms worsened after fatty foods?',
+    answers: ['No', 'Sometimes', 'Yes, clearly', 'Don\'t know']
+  },
+  diabetes: {
+    text: 'Do you have diabetes or vascular disease?',
+    answers: ['No', 'Possibly', 'Yes, diabetes', 'Yes, vascular disease']
+  },
+  blod: {
+    text: 'Have you seen blood?',
+    answers: ['No', 'Slightly, occasionally', 'Yes, every time', 'Heavy bleeding']
+  },
+  ater: {
+    text: 'Does pain decrease after eating?',
+    answers: ['No', 'Sometimes', 'Yes, clearly', 'Worsened by food']
+  },
+  anstrangning: {
+    text: 'Are symptoms triggered by exertion?',
+    answers: ['No', 'Sometimes', 'Yes, with light exertion', 'Yes, with all exertion']
+  },
+  utstrålning: {
+    text: 'Does pain radiate to another part of the body?',
+    answers: ['No, local', 'Slightly', 'Yes, clearly', 'Yes, down the arm/leg']
+  },
+  panik: {
+    text: 'Do you have sudden panic attacks?',
+    answers: ['No', 'Sometimes anxiety', 'Yes, panic attacks', 'Yes, frequent and intense']
+  },
+  jobb: {
+    text: 'Do symptoms affect your ability to work?',
+    answers: ['No', 'Slightly', 'Noticeably', 'Cannot work']
+  },
+  stämning: {
+    text: 'How is your mood in general?',
+    answers: ['Good', 'Slightly down', 'Depressed / sad', 'Dark thoughts']
+  },
+  yrke: {
+    text: 'Are you exposed to chemicals or allergens at work?',
+    answers: ['No', 'Possibly', 'Yes, chemicals', 'Yes, biological substances']
+  },
+  natt_cough: {
+    text: 'Do you wake up from coughing at night?',
+    answers: ['No', 'Sometimes', 'Yes, often', 'Yes, every night']
+  },
+  svaret: {
+    text: 'Is the skin inflamed (red, warm, tender)?',
+    answers: ['No, just pimples', 'Slightly red', 'Clearly inflamed', 'Yes, with nodules/cysts']
+  },
+  medicin: {
+    text: 'Do you take regular medication?',
+    answers: ['No', 'Occasional medication', 'Yes, for this condition', 'Yes, multiple medications']
+  },
+};
+
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let state = {
+  region: null, regionName: null,
+  layer: null,
+  disease: null,
+  step: 0,
+  mcqIndex: 0,
+  mcqAnswers: [],
+  mcqQuestions: [],
+};
+
+// ──────────────────────────────────────────────
+// REGION SELECT
+// ──────────────────────────────────────────────
+function selectRegion(region, name) {
+  // Deselect all
+  document.querySelectorAll('.region').forEach(r => r.classList.remove('selected'));
+  document.getElementById('r-' + region).classList.add('selected');
+
+  state.region = region;
+  state.regionName = name;
+  state.layer = null;
+  state.disease = null;
+  state.step = 1;
+
+  document.getElementById('layerBar').style.display = 'flex';
+  document.getElementById('regionBadge').textContent = '📍 ' + name;
+
+  // Build layer grid
+  buildLayerGrid();
+  showStep(1);
+  updateDots(1);
+}
+
+const layerConfig = [
+  { id:'skin',   icon:'🧴', name:'Skin', desc:'rashes, eczema, itching' },
+  { id:'muscle', icon:'💪', name:'Muscles & tendons', desc:'tension, pain, injury' },
+  { id:'bone',   icon:'🦴', name:'Bones & joints', desc:'joint pain, fractures, osteoarthritis' },
+  { id:'nerve',  icon:'⚡', name:'Nerves', desc:'numbness, tingling, sciatica' },
+  { id:'organ',  icon:'🫀', name:'Organs & internal', desc:'respiration, digestion, heart' },
+];
+
+function buildLayerGrid() {
+  const grid = document.getElementById('layerGrid');
+  grid.innerHTML = '';
+  layerConfig.forEach(l => {
+    const count = diseases.filter(d => d.region.includes(state.region) && d.layers.includes(l.id)).length;
+    if (count === 0) return;
+    const card = document.createElement('div');
+    card.className = 'layer-card';
+    card.innerHTML = `<span class="layer-card-icon">${l.icon}</span>
+      <span class="layer-card-name">${l.name}</span>
+      <span class="layer-card-count">${count} condition${count===1?'':'s'}</span>`;
+    card.onclick = () => {
+      document.querySelectorAll('.layer-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      state.layer = l.id;
+      document.getElementById('nextToDisease').disabled = false;
+      setLayer(l.id, null);
+    };
+    grid.appendChild(card);
+  });
+}
+
+// ──────────────────────────────────────────────
+// LAYER TOGGLE (body map highlight)
+// ──────────────────────────────────────────────
+function setLayer(layer, btn) {
+  state.layer = layer === 'all' ? null : layer;
+  if (btn) {
+    document.querySelectorAll('.layer-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+}
+
+// ──────────────────────────────────────────────
+// DISEASE LIST
+// ──────────────────────────────────────────────
+function buildDiseaseList() {
+  const list = document.getElementById('diseaseList');
+  list.innerHTML = '';
+  const filtered = diseases.filter(d =>
+    d.region.includes(state.region) &&
+    (!state.layer || d.layers.includes(state.layer))
+  );
+  if (filtered.length === 0) {
+    list.innerHTML = '<p style="color:var(--text2);font-size:14px;">No matching conditions for this layer. Try another one.</p>';
+    return;
+  }
+  filtered.forEach(d => {
+    const item = document.createElement('div');
+    item.className = 'disease-item';
+    item.innerHTML = `
+      <div>
+        <div class="disease-name">${d.name}</div>
+        <div class="disease-tags">${d.tags.map(t=>`<span class="disease-tag">${t}</span>`).join('')}</div>
+      </div>
+      <span class="disease-arrow">›</span>`;
+    item.onclick = () => {
+      document.querySelectorAll('.disease-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      state.disease = d;
+      document.getElementById('nextToMCQ').disabled = false;
+    };
+    list.appendChild(item);
+  });
+}
+
+// ──────────────────────────────────────────────
+// MCQ
+// ──────────────────────────────────────────────
+function buildMCQ() {
+  const d = state.disease;
+  state.mcqQuestions = d.questions.filter(q => questionBank[q]);
+  state.mcqIndex = 0;
+  state.mcqAnswers = [];
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const qs = state.mcqQuestions;
+  const idx = state.mcqIndex;
+
+  // Progress bars
+  const prog = document.getElementById('mcqProgress');
+  prog.innerHTML = qs.map((_, i) =>
+    `<div class="mcq-bar ${i < idx ? 'done' : i === idx ? 'current' : ''}"></div>`
+  ).join('');
+
+  const q = questionBank[qs[idx]];
+  document.getElementById('mcqQuestion').innerHTML =
+    `<div class="question-card"><div class="question-text">${q.text}</div></div>`;
+
+  const answers = document.getElementById('mcqAnswers');
+  answers.innerHTML = '';
+  q.answers.forEach((a, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.textContent = a;
+    btn.onclick = () => {
+      document.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state.mcqAnswers[idx] = i;
+      document.getElementById('nextToResult').disabled = false;
+      const label = state.mcqIndex >= state.mcqQuestions.length - 1 ? 'Show results →' : 'Next →';
+      document.getElementById('nextToResult').textContent = label;
+    };
+    answers.appendChild(btn);
+  });
+  document.getElementById('nextToResult').disabled = true;
+  document.getElementById('nextToResult').textContent =
+    idx >= qs.length - 1 ? 'Show results →' : 'Next →';
+}
+
+function nextQuestion() {
+  if (state.mcqIndex < state.mcqQuestions.length - 1) {
+    state.mcqIndex++;
+    renderQuestion();
+  } else {
+    goStep(4);
+  }
+}
+
+// ──────────────────────────────────────────────
+// RESULT
+// ──────────────────────────────────────────────
+function buildResult() {
+  const d = state.disease;
+  // Simple scoring — primary match + 2 alternatives from same region
+  const alts = diseases
+    .filter(x => x.id !== d.id && x.region.some(r => state.region === r))
+    .slice(0, 2);
+
+  document.getElementById('resultCard').innerHTML = `
+    <div class="result-label">Most likely condition</div>
+    <div class="result-disease">${d.name}</div>
+    <div class="result-conf">Recommended specialist: <strong>${d.specialist}</strong></div>`;
+
+  document.getElementById('resultAlts').innerHTML = alts.map(a =>
+    `<div class="result-alt">
+      <span class="alt-name">${a.name}</span>
+      <span class="alt-pct">${a.specialist}</span>
+    </div>`
+  ).join('');
+}
+
+// ──────────────────────────────────────────────
+// NAVIGATION
+// ──────────────────────────────────────────────
+const stepIds = ['stepWelcome','stepLayer','stepDisease','stepMCQ','stepResult'];
+
+function showStep(n) {
+  stepIds.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.style.display = i === n ? 'flex' : 'none';
+  });
+}
+
+function goStep(n) {
+  if (n === 2) buildDiseaseList();
+  if (n === 3) buildMCQ();
+  if (n === 4) buildResult();
+  state.step = n;
+  showStep(n);
+  updateDots(n);
+}
+
+function goBack(from) {
+  if (from === 1) { showStep(0); updateDots(0); }
+  else if (from === 2) { showStep(1); updateDots(1); }
+  else if (from === 3) { showStep(2); updateDots(2); }
+  else if (from === 4) { showStep(3); updateDots(3); }
+}
+
+function updateDots(active) {
+  document.querySelectorAll('.step-dot').forEach((d, i) => {
+    d.classList.remove('active','done');
+    if (i < active) d.classList.add('done');
+    else if (i === active) d.classList.add('active');
+  });
+}
+
+function resetAll() {
+  state = { region:null, regionName:null, layer:null, disease:null, step:0, mcqIndex:0, mcqAnswers:[], mcqQuestions:[] };
+  document.querySelectorAll('.region').forEach(r => r.classList.remove('selected'));
+  document.getElementById('layerBar').style.display = 'none';
+  showStep(0);
+  updateDots(0);
+}
+
+// Tooltip on regions
+document.querySelectorAll('.region').forEach(r => {
+  const tip = document.getElementById('tooltip');
+  r.addEventListener('mouseenter', e => {
+    tip.textContent = r.dataset.name;
+    tip.classList.add('show');
+  });
+  r.addEventListener('mousemove', e => {
+    tip.style.left = (e.clientX + 14) + 'px';
+    tip.style.top = (e.clientY - 28) + 'px';
+  });
+  r.addEventListener('mouseleave', () => tip.classList.remove('show'));
+});
+
+// Init
+showStep(0);
+</script>
+</body>
+</html>

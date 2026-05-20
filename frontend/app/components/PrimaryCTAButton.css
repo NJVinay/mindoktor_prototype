@@ -1,0 +1,32 @@
+.primary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 14px 32px;
+  background: var(--color-primary);
+  color: var(--color-text-on-dark);
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  border-radius: var(--radius-pill);
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  border: none;
+  transition: background var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
+}
+
+.primary-cta:hover:not(.primary-cta--disabled) {
+  background: var(--color-primary-hover);
+  transform: scale(1.02);
+  box-shadow: 0 4px 16px rgba(232, 37, 31, 0.3);
+}
+
+.primary-cta:active:not(.primary-cta--disabled) {
+  transform: scale(0.98);
+}
+
+.primary-cta--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
