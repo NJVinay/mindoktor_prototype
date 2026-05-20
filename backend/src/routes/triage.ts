@@ -73,8 +73,8 @@ triageRoutes.put('/session/:token/answer', async (req: Request, res: Response, n
     const updated = await prisma.triageSession.update({
       where: { session_token: token },
       data: {
-        answers: updatedAnswers,
-        body_zone: typeof updatedAnswers['q2_location'] === 'string' ? updatedAnswers['q2_location'] : session.body_zone,
+        answers: updatedAnswers as any,
+        body_zone: typeof updatedAnswers['q2_location'] === 'string' ? (updatedAnswers['q2_location'] as string) : session.body_zone,
       },
     });
 

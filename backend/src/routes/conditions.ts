@@ -6,12 +6,18 @@ import { AppError } from '../middleware/errorHandler.js';
 export const conditionRoutes = Router();
 
 const querySchema = z.object({
-  category: z.string().optional(),
-  zone: z.string().optional(),
-  layer: z.string().optional(),
-  tag: z.string().optional(),
-  q: z.string().optional(),
-});
+  category: z.union([z.string(), z.array(z.string())]).optional(),
+  zone: z.union([z.string(), z.array(z.string())]).optional(),
+  layer: z.union([z.string(), z.array(z.string())]).optional(),
+  tag: z.union([z.string(), z.array(z.string())]).optional(),
+  q: z.union([z.string(), z.array(z.string())]).optional(),
+}).transform((data) => ({
+  category: Array.isArray(data.category) ? data.category[0] : data.category,
+  zone: Array.isArray(data.zone) ? data.zone[0] : data.zone,
+  layer: Array.isArray(data.layer) ? data.layer[0] : data.layer,
+  tag: Array.isArray(data.tag) ? data.tag[0] : data.tag,
+  q: Array.isArray(data.q) ? data.q[0] : data.q,
+}));
 
 /**
  * GET /api/v1/conditions

@@ -1,7 +1,14 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 
 export const zoneRoutes = Router();
+
+const querySchema = z.object({
+  zone: z.union([z.string(), z.array(z.string())]).optional(),
+}).transform((data) => ({
+  zone: Array.isArray(data.zone) ? data.zone[0] : data.zone,
+}));
 
 /**
  * GET /api/v1/zones/:zone/conditions
