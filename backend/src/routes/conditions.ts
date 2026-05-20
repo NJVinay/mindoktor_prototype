@@ -129,7 +129,7 @@ conditionRoutes.get('/layers', async (req: Request, res: Response, next: NextFun
  */
 conditionRoutes.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { slug } = req.params;
+    const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
 
     const condition = await prisma.condition.findUnique({
       where: { slug },

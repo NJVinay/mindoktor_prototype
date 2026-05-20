@@ -43,7 +43,7 @@ categoryRoutes.get('/', async (_req: Request, res: Response, next: NextFunction)
  */
 categoryRoutes.get('/:key/conditions', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { key } = req.params;
+    const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
 
     const category = await prisma.category.findUnique({
       where: { key },

@@ -48,7 +48,7 @@ triageRoutes.post('/session', async (_req: Request, res: Response, next: NextFun
  */
 triageRoutes.post('/session/:token/answer', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.params;
+    const token = Array.isArray(req.params.token) ? req.params.token[0] : req.params.token;
     const body = answerSchema.parse(req.body);
 
     const session = await prisma.triageSession.findUnique({
@@ -94,7 +94,7 @@ triageRoutes.post('/session/:token/answer', async (req: Request, res: Response, 
  */
 triageRoutes.post('/session/:token/resolve', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.params;
+    const token = Array.isArray(req.params.token) ? req.params.token[0] : req.params.token;
 
     const session = await prisma.triageSession.findUnique({
       where: { session_token: token },
@@ -180,7 +180,7 @@ triageRoutes.post('/session/:token/resolve', async (req: Request, res: Response,
  */
 triageRoutes.get('/session/:token', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { token } = req.params;
+    const token = Array.isArray(req.params.token) ? req.params.token[0] : req.params.token;
 
     const session = await prisma.triageSession.findUnique({
       where: { session_token: token },
