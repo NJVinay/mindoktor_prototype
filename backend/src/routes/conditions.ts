@@ -82,14 +82,17 @@ conditionRoutes.get('/', async (req: Request, res: Response, next: NextFunction)
  */
 conditionRoutes.get('/layers', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { zone } = req.query;
-    if (!zone || typeof zone !== 'string') {
+    // Extract zone safely - could be string or string[] from Express
+    const zoneRaw = req.query.zone as any;
+    const zoneParam = Array.isArray(zoneRaw) ? zoneRaw[0] : zoneRaw;
+
+    if (!zoneParam) {
       throw new AppError(400, 'zone query parameter is required');
     }
 
     // Find all conditions for this zone
     const conditions = await prisma.condition.findMany({
-      where: { body_zones: { has: zone } },
+      where: { body_zones: { has: zoneParam } },
       select: { layers: true },
     });
 
