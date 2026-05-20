@@ -90,7 +90,7 @@ export default function ResultPage() {
               High confidence &middot; Acute care
             </div>
             <p className={styles["result-body"]}>
-              We have matched you with a specialist who is available right now. 
+              We have matched you with a specialist who is available right now.
               The consultation will take place directly in our secure chat.
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function ResultPage() {
             </div>
             <div>Usually responds in ~2 hours</div>
           </div>
-          <PrimaryCTAButton onClick={() => window.location.href = "https://guides.mindoktor.se"}>
+          <PrimaryCTAButton onClick={() => window.location.href = MINDOKTOR_GUIDE_URL}>
             Start consultation &rarr;
           </PrimaryCTAButton>
         </div>

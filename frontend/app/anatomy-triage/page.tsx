@@ -7,7 +7,7 @@ import PrimaryCTAButton from "../components/PrimaryCTAButton";
 import { questionBank } from "../lib/questionBank";
 import styles from "./page.module.css";
 
-const API_BASE = "http://localhost:4000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:4000/api/v1";
 
 const LAYER_LABELS: Record<string, string> = {
   skin: "Skin (rashes, itching)",
@@ -23,10 +23,10 @@ function AnatomyTriageContent() {
   const zone = searchParams.get("zone");
 
   const [step, setStep] = useState<"layer" | "condition" | "questions" | "result">("layer");
-  
+
   const [availableLayers, setAvailableLayers] = useState<{ layer: string; count: number }[]>([]);
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
-  
+
   const [conditions, setConditions] = useState<any[]>([]);
   const [selectedCondition, setSelectedCondition] = useState<any | null>(null);
 
