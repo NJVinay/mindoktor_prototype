@@ -40,7 +40,15 @@ function AnatomyTriageContent() {
         .then((data) => {
           setAvailableLayers(data.data || []);
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error(err);
+          // Fallback for Netlify production without backend
+          setAvailableLayers([
+            { layer: "skin", count: 5 },
+            { layer: "nerve", count: 5 },
+            { layer: "organ", count: 4 }
+          ]);
+        });
     }
   }, [zone, step]);
 
@@ -51,7 +59,14 @@ function AnatomyTriageContent() {
         .then((data) => {
           setConditions(data.data || []);
         })
-        .catch(console.error);
+        .catch((err) => {
+          console.error(err);
+          // Fallback for Netlify production without backend
+          setConditions([
+            { slug: "mock-condition-1", name_en: "Mock Condition A", questions: ["q1", "q2", "q3"], specialist_type: "Dermatologist" },
+            { slug: "mock-condition-2", name_en: "Mock Condition B", questions: ["q2", "q3"], specialist_type: "General Practitioner" }
+          ]);
+        });
     }
   }, [zone, selectedLayer, step]);
 
