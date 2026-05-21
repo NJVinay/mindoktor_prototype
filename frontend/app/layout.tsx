@@ -4,6 +4,7 @@ import "./globals.css";
 import TopNavBar from "./components/TopNavBar";
 import SecondaryTabNav from "./components/SecondaryTabNav";
 import Footer from "./components/Footer";
+import HealthChatbot from "./components/chatbot/HealthChatbot";
 
 const sora = Sora({ subsets: ["latin"] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
         <main id="main-content">
           {children}
         </main>
+        <HealthChatbot />
         <Footer />
       </body>
     </html>

@@ -1,0 +1,94 @@
+.message-queue {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.message-queue__header {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border-card);
+}
+
+.message-queue__header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.message-queue__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: #f9fafb;
+}
+
+.message-bubble {
+  max-width: 85%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble--patient {
+  align-self: flex-start;
+}
+
+.message-bubble--doctor {
+  align-self: flex-end;
+}
+
+.message-bubble__text {
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.message-bubble--patient .message-bubble__text {
+  background: white;
+  border: 1px solid var(--color-border-card);
+  color: var(--color-text-body);
+  border-bottom-left-radius: 4px;
+}
+
+.message-bubble--doctor .message-bubble__text {
+  background: var(--color-primary-light);
+  color: var(--color-text-heading);
+  border-bottom-right-radius: 4px;
+}
+
+.message-bubble__time {
+  font-size: 10px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+  align-self: flex-end;
+}
+
+.message-bubble--patient .message-bubble__time {
+  align-self: flex-start;
+}
+
+.message-queue__input {
+  padding: var(--space-3);
+  background: white;
+  border-top: 1px solid var(--color-border-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.message-queue__input textarea {
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius-input);
+  padding: var(--space-2);
+  font-family: var(--font-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.message-queue__input textarea:focus {
+  border-color: var(--color-primary);
+}

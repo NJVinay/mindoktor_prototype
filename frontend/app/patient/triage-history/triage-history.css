@@ -1,0 +1,85 @@
+.triage-history {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+.triage-history__header {
+  margin-bottom: var(--space-6);
+}
+
+.triage-history__back {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-primary);
+  font-size: var(--text-body);
+}
+
+.triage-history__back:hover {
+  color: var(--color-primary);
+}
+
+.triage-history__header h1 {
+  font-size: var(--text-h2);
+  color: var(--color-text-heading);
+}
+
+.triage-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.history-card {
+  background: white;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4);
+}
+
+.history-card__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.history-card__date {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+}
+
+.history-card__status {
+  color: var(--color-success);
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+}
+
+.history-card__condition {
+  font-size: var(--text-h3);
+  margin-bottom: var(--space-3);
+}
+
+.history-card__symptoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.history-card__symptom-tag {
+  background: var(--color-bg-footer);
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+
+.history-card__action {
+  background: var(--color-bg-blush);
+  padding: var(--space-2);
+  border-radius: var(--radius-input);
+  font-size: 14px;
+}

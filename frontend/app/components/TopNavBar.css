@@ -78,6 +78,17 @@
   min-height: 40px;
 }
 
+/* User Chip */
+.top-nav__user-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-on-dark);
+}
+
 /* Hamburger */
 .top-nav__hamburger {
   display: flex;
@@ -169,4 +180,15 @@
   .top-nav__mobile-actions {
     display: flex;
   }
+}
+
+.top-nav__user-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-on-dark);
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
 }

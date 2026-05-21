@@ -1,0 +1,41 @@
+.doctor-dashboard {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+.doctor-dashboard__header {
+  margin-bottom: var(--space-4);
+}
+
+.doctor-dashboard__header h1 {
+  font-size: var(--text-h2);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-heading);
+}
+
+.doctor-dashboard__header p {
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+  margin-top: 4px;
+}
+
+.doctor-dashboard__panels {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  gap: var(--space-3);
+  min-height: 600px;
+}
+
+.doctor-dashboard__panel {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .doctor-dashboard__panels {
+    grid-template-columns: 1fr;
+  }
+}

@@ -305,6 +305,91 @@ async function main() {
   `);
   console.log('  ✅ Created trigram index');
 
+  // ─── USERS (Auth) ─────────────────────────────────────────────
+  console.log('👤 Creating users...');
+
+  const bcrypt = await import('bcryptjs');
+  const hashedPassword = await bcrypt.hash('doctor123', 10);
+  const hashedPatientPassword = await bcrypt.hash('patient123', 10);
+
+  // Clean existing users and assignments
+  await prisma.doctorPatient.deleteMany();
+  await prisma.user.deleteMany();
+
+  const doctorUser = await prisma.user.create({
+    data: {
+      email: 'doctor@rightdoor.se',
+      password: hashedPassword,
+      role: 'DOCTOR',
+      name: 'Dr. Vibeke Billing',
+    },
+  });
+
+  const patientUser = await prisma.user.create({
+    data: {
+      email: 'patient@rightdoor.se',
+      password: hashedPatientPassword,
+      role: 'PATIENT',
+      name: 'Anna Lindström',
+    },
+  });
+
+  // Create 4 mock patient accounts
+  const mockPatients = await Promise.all([
+    prisma.user.create({
+      data: {
+        email: 'anna@rightdoor.se',
+        password: hashedPatientPassword,
+        role: 'PATIENT',
+        name: 'Anna Lindström',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'erik@rightdoor.se',
+        password: hashedPatientPassword,
+        role: 'PATIENT',
+        name: 'Erik Johansson',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'sara@rightdoor.se',
+        password: hashedPatientPassword,
+        role: 'PATIENT',
+        name: 'Sara Nilsson',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        email: 'mikael@rightdoor.se',
+        password: hashedPatientPassword,
+        role: 'PATIENT',
+        name: 'Mikael Berg',
+      },
+    }),
+  ]);
+
+  // Assign all mock patients to the doctor
+  await prisma.doctorPatient.createMany({
+    data: mockPatients.map((p) => ({
+      doctor_id: doctorUser.id,
+      patient_id: p.id,
+      status: 'active',
+    })),
+  });
+
+  // Also assign the main patient user
+  await prisma.doctorPatient.create({
+    data: {
+      doctor_id: doctorUser.id,
+      patient_id: patientUser.id,
+      status: 'active',
+    },
+  });
+
+  console.log(`  ✅ Created ${mockPatients.length + 2} users and ${mockPatients.length + 1} assignments`);
+
   console.log('\n🎉 Seeding complete!');
 }
 

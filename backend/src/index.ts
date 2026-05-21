@@ -10,6 +10,9 @@ import { searchRoutes } from './routes/search.js';
 import { triageRoutes } from './routes/triage.js';
 import { doctorRoutes } from './routes/doctors.js';
 import { zoneRoutes } from './routes/zones.js';
+import { authRoutes } from './routes/auth.js';
+import { doctorPanelRoutes } from './routes/doctorPanel.js';
+import { chatbotRoutes } from './routes/chatbot.js';
 
 const app = express();
 const PORT = parseInt(process.env['PORT'] ?? '4000', 10);
@@ -17,7 +20,7 @@ const FRONTEND_ORIGIN = process.env['FRONTEND_ORIGIN'] ?? 'http://localhost:3000
 
 // ─── Middleware ──────────────────────────────────────────────────
 app.use(cors({
-  origin: FRONTEND_ORIGIN,
+  origin: [FRONTEND_ORIGIN, 'http://localhost:3000', 'http://localhost:3001'],
   credentials: true,
 }));
 app.use(express.json());
@@ -34,6 +37,9 @@ app.use('/api/v1/search', searchRoutes);
 app.use('/api/v1/triage', triageRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
 app.use('/api/v1/zones', zoneRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/doctor', doctorPanelRoutes);
+app.use('/api/v1/chatbot', chatbotRoutes);
 
 // ─── Error Handling ─────────────────────────────────────────────
 app.use(errorHandler);

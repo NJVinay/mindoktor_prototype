@@ -2,10 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/app/store/authStore';
 import './TopNavBar.css';
 
 export default function TopNavBar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, role, name, logout, hydrate } = useAuthStore();
+
+  // Hydrate on mount
+  if (typeof window !== 'undefined' && !isAuthenticated) {
+    hydrate();
+  }
+
+  const handleLogout = () => {
+    logout();
+    router.replace('/login');
+  };
 
   return (
     <nav className="top-nav" role="navigation" aria-label="Main navigation">
@@ -30,15 +44,31 @@ export default function TopNavBar() {
 
         {/* Desktop Links */}
         <div className="top-nav__desktop-links">
-          <Link href="/" className="top-nav__cta-btn">
-            Seek care
-          </Link>
-          <Link href="/" className="top-nav__link">
-            How it works
-          </Link>
-          <Link href="/" className="top-nav__link">
-            Log in
-          </Link>
+          {isAuthenticated && role ? (
+            <>
+              <Link href={role === 'DOCTOR' ? '/doctor/dashboard' : '/patient/dashboard'} className="top-nav__link">
+                Dashboard
+              </Link>
+              <div className="top-nav__user-chip" style={{ background: role === 'DOCTOR' ? 'var(--color-accent-teal)' : 'var(--color-primary)' }}>
+                {name?.split(' ')[0]} · {role === 'DOCTOR' ? 'Doctor' : 'Patient'}
+              </div>
+              <button className="top-nav__link" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', color: 'inherit' }}>
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/" className="top-nav__cta-btn">
+                Seek care
+              </Link>
+              <Link href="/" className="top-nav__link">
+                How it works
+              </Link>
+              <Link href="/login" className="top-nav__link">
+                Log in
+              </Link>
+            </>
+          )}
           <button
             className="top-nav__hamburger"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -53,9 +83,15 @@ export default function TopNavBar() {
 
         {/* Mobile Actions */}
         <div className="top-nav__mobile-actions">
-          <Link href="/" className="top-nav__cta-btn top-nav__cta-btn--small">
-            Seek care
-          </Link>
+          {isAuthenticated && role ? (
+            <div className="top-nav__user-chip" style={{ background: role === 'DOCTOR' ? 'var(--color-accent-teal)' : 'var(--color-primary)', fontSize: '12px', padding: '4px 12px' }}>
+              {name?.split(' ')[0]}
+            </div>
+          ) : (
+            <Link href="/" className="top-nav__cta-btn top-nav__cta-btn--small">
+              Seek care
+            </Link>
+          )}
           <button
             className="top-nav__hamburger"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -80,21 +116,52 @@ export default function TopNavBar() {
             ✕
           </button>
           <div className="top-nav__overlay-links">
-            <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
-              Seek care
-            </Link>
-            <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
-              How it works
-            </Link>
-            <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
-              Vaccination
-            </Link>
-            <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
-              Prescription renewal
-            </Link>
-            <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
-              Log in
-            </Link>
+            {isAuthenticated && role ? (
+              <>
+                <Link
+                  href={role === 'DOCTOR' ? '/doctor/dashboard' : '/patient/dashboard'}
+                  className="top-nav__overlay-link"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                {role === 'PATIENT' && (
+                  <>
+                    <Link href="/patient/triage-history" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                      My Triage
+                    </Link>
+                    <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                      Seek care
+                    </Link>
+                  </>
+                )}
+                <button
+                  className="top-nav__overlay-link"
+                  onClick={() => { handleLogout(); setMenuOpen(false); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                  Seek care
+                </Link>
+                <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                  How it works
+                </Link>
+                <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                  Vaccination
+                </Link>
+                <Link href="/" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                  Prescription renewal
+                </Link>
+                <Link href="/login" className="top-nav__overlay-link" onClick={() => setMenuOpen(false)}>
+                  Log in
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
